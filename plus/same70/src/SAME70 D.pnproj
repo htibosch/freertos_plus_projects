@@ -1,0 +1,1 @@
+<Project name="SAME70 D"><Folder name="Config"><File path="FreeRTOSConfig.h"></File><File path="FreeRTOSFATConfig.h"></File><File path="FreeRTOSIPConfig.h"></File></Folder><File path="config.mk"></File><File path="main.c"></File><File path="Makefile"></File></Project>
