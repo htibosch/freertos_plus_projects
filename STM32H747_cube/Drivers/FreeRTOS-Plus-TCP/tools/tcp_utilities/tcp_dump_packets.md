@@ -9,8 +9,8 @@ How to include 'tcp_dump_packets' into a project:
 
 ● Make sure that tools/tcp_dump_packets.c is added to the source files
 ● See if Network Interface has been adapted to call:
-    iptraceDUMP_PACKET( ucBuffer, xLength, pdTRUE );     /* Incoming packet. */
-    iptraceDUMP_PACKET( ucBuffer, xLength, pdFALSE );    /* Outgoing packet. */
+    `iptraceDUMP_PACKET( ucBuffer, xLength, pdTRUE );     /* Incoming packet. */`
+    `iptraceDUMP_PACKET( ucBuffer, xLength, pdFALSE );    /* Outgoing packet. */`
 ● Once the network is up, call `dump_packet_init()` with a file name and a pointer to
   `DumpEntries_t`, which contains the requirements. For instance like this:
    static DumpEntries_t xExampleEntries = {
@@ -48,7 +48,7 @@ Here is some contents of the output file:
     /*-----------------------------------------------------------*/
 
 tcp_dump_packets has an enum of all possible properties of network packets:
-    ICMP4, ICMP6, UDP, TCP, DNS, REPLY, REQUEST, SYN, 
+    ICMP4, ICMP6, UDP, TCP, DNS, REPLY, REQUEST, SYN,
     FIN, RST, ACK, IN, OUT, ARP, FRAME_ARP, FRAME_4, and FRAME_6
 
 Each property is defined as a bit so they can be combined as in:

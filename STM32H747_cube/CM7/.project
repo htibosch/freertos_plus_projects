@@ -226,14 +226,14 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FreeRTOS-Plus-TCP/source/FreeRTOS_UDP_IP.c</locationURI>
 		</link>
 		<link>
-			<name>Drivers/FreeRTOS-Plus-TCP/tools/tcp_mem_stats.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FreeRTOS-Plus-TCP/tools/tcp_mem_stats.c</locationURI>
-		</link>
-		<link>
 			<name>Drivers/FreeRTOS-Plus-TCP/source/portable/NetworkInterface</name>
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FreeRTOS-Plus-TCP/source/portable/NetworkInterface</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FreeRTOS-Plus-TCP/tools/tcp_utilities/tcp_mem_stats.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FreeRTOS-Plus-TCP/tools/tcp_utilities/tcp_mem_stats.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_1.c</name>

@@ -60,6 +60,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/STM32H747_cube_second/Drivers/FreeRTOS-Plus-TCP/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/STM32H747_cube_second/Drivers/FreeRTOS-Plus-TCP/source/portable/Compiler/GCC}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/STM32H747_cube_second/Drivers/FreeRTOS-Plus-TCP/source/portable/NetworkInterface/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/STM32H747_cube_second/Drivers/FreeRTOS-Plus-TCP/tools/tcp_utilities/include}&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.836398470" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
