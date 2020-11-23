@@ -50,7 +50,6 @@
 #include "NetworkBufferManagement.h"
 #include "FreeRTOS_DNS.h"
 
-
 /* Used to ensure the structure packing is having the desired effect.  The
  * 'volatile' is used to prevent compiler warnings about comparing a constant with
  * a constant. */

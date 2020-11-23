@@ -48,6 +48,7 @@
 #include "FreeRTOS_DHCP.h"
 #include "NetworkInterface.h"
 #include "NetworkBufferManagement.h"
+#include "IPTraceMacroDefaults.h"
 
 #if ( ipconfigUSE_DNS == 1 )
 	#include "FreeRTOS_DNS.h"

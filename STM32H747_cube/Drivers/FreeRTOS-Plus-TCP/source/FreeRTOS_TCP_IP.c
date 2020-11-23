@@ -53,7 +53,6 @@
 #include "NetworkBufferManagement.h"
 #include "FreeRTOS_ARP.h"
 
-
 /* Just make sure the contents doesn't get compiled if TCP is not enabled. */
 #if ipconfigUSE_TCP == 1
 
