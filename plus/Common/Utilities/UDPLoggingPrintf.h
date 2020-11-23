@@ -88,7 +88,7 @@ void vUDPLoggingTaskCreate( void );
  * generated to try to avoid the logging buffer overflowing.  WARNING - this
  * function will place the calling task into the Blocked state for 20ms.
  */
-void vUDPLoggingFlush( void );
+void vUDPLoggingFlush( TickType_t uxWaitTicks );
 
 /* FreeRTOS+TCP includes. */
 #include "FreeRTOS_IP.h"

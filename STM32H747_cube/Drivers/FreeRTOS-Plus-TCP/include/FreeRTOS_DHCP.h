@@ -54,7 +54,8 @@ extern "C" {
 /* DHCP state machine states. */
 typedef enum
 {
-	eWaitingSendFirstDiscover = 0,	/* Initial state.  Send a discover the first time it is called, and reset all timers. */
+	aInitialWait = 0,				/* Initial state: open a socket and wait a short time. */
+	eWaitingSendFirstDiscover,		/* Send a discover the first time it is called, and reset all timers. */
 	eWaitingOffer,					/* Either resend the discover, or, if the offer is forthcoming, send a request. */
 	eWaitingAcknowledge,			/* Either resend the request. */
 	#if( ipconfigDHCP_FALL_BACK_AUTO_IP != 0 )
@@ -82,10 +83,6 @@ struct xDHCP_DATA
 
 typedef struct xDHCP_DATA DHCPData_t;
 
-/*
- * NOT A PUBLIC API FUNCTION.
- */
-void vDHCPProcess( BaseType_t xReset );
 
 /* Internal call: returns true if socket is the current DHCP socket */
 BaseType_t xIsDHCPSocket( Socket_t xSocket );

@@ -185,7 +185,9 @@ about an incompatibily between format and parameters.
 Sometimes uint32_t is an unsigned (%u), sometimes it is a ulong (%lu). */
 
 typedef unsigned printf_unsigned;
+typedef unsigned long printf_long_unsigned;
 typedef int printf_signed;
+typedef long printf_long_signed;
 
 extern const char *FreeRTOS_inet_ntoa( uint32_t ulIPAddress, char *pcBuffer );
 

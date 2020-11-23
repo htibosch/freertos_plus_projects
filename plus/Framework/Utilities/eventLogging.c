@@ -12,7 +12,7 @@
 
 #include "eventLogging.h"
 
-void vUDPLoggingFlush( void );
+void vUDPLoggingFlush( TickType_t uxWaitTicks );
 
 #if USE_CLOCK
 #include "setclock.h"
@@ -25,7 +25,6 @@ void vUDPLoggingFlush( void );
 #endif
 
 #if( __SAM4E16E__ )
-void vUDPLoggingFlush( void );
 #define	vFlushLogging	vUDPLoggingFlush
 #endif
 
@@ -252,7 +251,7 @@ ullLastTime = xEventLogs.events[index].ullTimestamp;
 		}
 		ullLastTime = pxEvent->ullTimestamp;
 		//if ((i % 8) == 0)
-			vUDPLoggingFlush();
+			vUDPLoggingFlush( 0 );
 	}
 	vTaskDelay( 200 );
 	iEventLogClear ();

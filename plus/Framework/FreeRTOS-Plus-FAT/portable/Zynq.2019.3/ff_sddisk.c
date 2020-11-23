@@ -474,7 +474,10 @@ CacheMemoryInfo_t *pxCacheMem = NULL;
 		/* Initialise the created disk structure. */
 		memset( pxDisk, '\0', sizeof( *pxDisk ) );
 
-		pxDisk->ulNumberOfSectors = myCSD.sd_last_block_address + 1;
+		#warnign As proposed by Siddhant Modi <siddhant.modi@gmail.com>
+
+		//pxDisk->ulNumberOfSectors = myCSD.sd_last_block_address + 1;
+		pxDisk->ulNumberOfSectors = pxSDCardInstance->SectorCount;
 
 		if( xPlusFATMutex == NULL )
 		{

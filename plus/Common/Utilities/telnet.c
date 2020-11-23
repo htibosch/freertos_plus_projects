@@ -188,9 +188,8 @@ BaseType_t xResult = 0;
 
 BaseType_t xTelnetCreate( Telnet_t * pxTelnet, BaseType_t xPortNr )
 {
-#pragma warning Please change back
-BaseType_t xSendTimeOut = portMAX_DELAY;
-BaseType_t xRecvTimeOut = 10;
+BaseType_t xSendTimeOut = pdMS_TO_TICKS( 100U );
+BaseType_t xRecvTimeOut = pdMS_TO_TICKS( 10U );
 struct freertos_sockaddr xBindAddress;
 BaseType_t xResult = 0;
 

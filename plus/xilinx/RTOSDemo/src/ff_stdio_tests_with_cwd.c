@@ -81,6 +81,12 @@
 #include "ff_headers.h"
 #include "ff_stdio.h"
 
+#if( ffconfigMKDIR_RECURSIVE != 0 )
+	#define MKDIR_FALSE	, pdFALSE
+#else
+	#define MKDIR_FALSE
+#endif
+
 /* The number of bytes read/written to the example files at a time. */
 #define fsRAM_BUFFER_SIZE 				200
 
@@ -203,18 +209,18 @@ char *pcRAMBuffer, *pcFileName;
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Create nested subdirectories from the root of the mount. */
-	iReturned = ff_mkdir( "sub1" );
+	iReturned = ff_mkdir( "sub1" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2" );
+	iReturned = ff_mkdir( "sub1/sub2" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2/sub3" );
+	iReturned = ff_mkdir( "sub1/sub2/sub3" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2/sub3/sub4/" );
+	iReturned = ff_mkdir( "sub1/sub2/sub3/sub4/" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* This is the non-recursive version, so the following is expected to
 	fail. */
-	iReturned = ff_mkdir( "sub1/sub2/subx/suby" );
+	iReturned = ff_mkdir( "sub1/sub2/subx/suby" MKDIR_FALSE );
 	configASSERT( iReturned == -1 );
 
 	/* Move into sub3. */
@@ -222,7 +228,7 @@ char *pcRAMBuffer, *pcFileName;
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Make more directories using relative paths. */
-	iReturned = ff_mkdir( "../../sub2/sub3/sub4/sub5" );
+	iReturned = ff_mkdir( "../../sub2/sub3/sub4/sub5" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Sub6 does not exist, expect this to fail. */
@@ -966,9 +972,9 @@ char cReadBuffer[ 45 ];
 	configASSERT( iReturned == -1 );
 
 	/* Create subdirectories into/from which files will be moved. */
-	iReturned = ff_mkdir( "source_dir" );
+	iReturned = ff_mkdir( "source_dir" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "destination_dir" );
+	iReturned = ff_mkdir( "destination_dir" MKDIR_FALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Create a file in source_dir then write some data to it. */

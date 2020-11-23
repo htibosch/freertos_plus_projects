@@ -149,7 +149,7 @@ message. */
 
 /* Log messages are cached in a stream buffer.  The stream buffer's storage
 area is dimensioned to contain the maximum number of strings of the maximum
-string length. */
+string length.  Defaults to 20 x 200 bytes. */
 #define logMESSAGE_BUFFER_SIZE_BYTES  ( ( configUDP_LOGGING_STRING_LENGTH ) * ( configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER ) )
 
 /* Ascii characters used in this file. */
@@ -183,6 +183,9 @@ static size_t prvGetMessageFromStreamBuffer( char *pcBuffer, size_t xBufferLengt
  * logging task to transmit.
  */
 static size_t prvBufferFormattedString( const char *pcFormatString, va_list xArgs );
+
+/* The following function will be called at the end of lUDPLoggingPrintf(). */
+void __attribute__((weak)) vUDPLoggingPost( void );
 
 void vUDPLoggingHook( const char *pcMessage, BaseType_t xLength );
 
@@ -350,6 +353,7 @@ size_t xLength;
 		va_start (args, pcFormatString);
 		xLength = prvBufferFormattedString (pcFormatString, args);
 		va_end (args);
+		vUDPLoggingPost();
 	}
 	else
 	{
@@ -365,7 +369,10 @@ BaseType_t rc_create;
 void vUDPLoggingTaskCreate( void )
 {
 	/* Start a task which will send out the logging lines to a UDP address. */
-	rc_create = xTaskCreate( prvLoggingTask, "LogTask", configUDP_LOGGING_TASK_STACK_SIZE, NULL, configUDP_LOGGING_TASK_PRIORITY, &xLoggingTask );
+	if( xLoggingTask == NULL )
+	{
+		rc_create = xTaskCreate( prvLoggingTask, "LogTask", configUDP_LOGGING_TASK_STACK_SIZE, NULL, configUDP_LOGGING_TASK_PRIORITY, &xLoggingTask );
+	}
 }
 /*-----------------------------------------------------------*/
 
@@ -587,7 +594,6 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 				}
 				#else
 				{
-//#warning Do not send logging as a test
 					FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xRemoteAddress, sizeof( xRemoteAddress ) );
 				}
 				#endif
@@ -605,10 +611,18 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 }
 /*-----------------------------------------------------------*/
 
-void vUDPLoggingFlush( void )
+void vUDPLoggingFlush( TickType_t uxWaitTicks )
 {
-const TickType_t xDelay = pdMS_TO_TICKS( 20UL );
+TickType_t xDelay = pdMS_TO_TICKS( 20UL );
 
+	if( uxWaitTicks != 0 )
+	{
+		xDelay = uxWaitTicks;
+	}
+	else
+	{
+		xDelay = pdMS_TO_TICKS( 20UL );
+	}
 	/* In some situations a lot of logging is produced deliberately in which
 	case vUDPLoggingFlush() can be called to prevent the buffer overflowing. */
 	if( xLoggingTask != NULL )
@@ -620,4 +634,3 @@ const TickType_t xDelay = pdMS_TO_TICKS( 20UL );
 	/* Allow the low priority logging task a chance to clear the buffer. */
 	vTaskDelay( pdMS_TO_TICKS( xDelay ) );
 }
-

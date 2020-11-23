@@ -69,14 +69,6 @@
 
 /* High resolution timer functions - used for logging only. */
 
-#include <stdint.h>
-#include "FreeRTOS.h"
-#include "task.h"
-#include "list.h"
-#include "FreeRTOS_IP.h"
-
-TickType_t xTimer;
-
 /* Standard includes. */
 #include <stdint.h>
 #include <stdio.h>

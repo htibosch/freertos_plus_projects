@@ -344,13 +344,14 @@ typedef enum
 	eARPTimerEvent,			/* 3: The ARP timer expired. */
 	eStackTxEvent,			/* 4: The software stack has queued a packet to transmit. */
 	eDHCPEvent,				/* 5: Process the DHCP state machine. */
-	eTCPTimerEvent,			/* 6: See if any TCP socket needs attention. */
-	eTCPAcceptEvent,		/* 7: Client API FreeRTOS_accept() waiting for client connections. */
-	eTCPNetStat,			/* 8: IP-task is asked to produce a netstat listing. */
-	eSocketBindEvent,		/* 9: Send a message to the IP-task to bind a socket to a port. */
-	eSocketCloseEvent,		/*10: Send a message to the IP-task to close a socket. */
-	eSocketSelectEvent,		/*11: Send a message to the IP-task for select(). */
-	eSocketSignalEvent,		/*12: A socket must be signalled. */
+	eDHCPRecv,				/* 6: A DHCP packet has been received. */
+	eTCPTimerEvent,			/* 7: See if any TCP socket needs attention. */
+	eTCPAcceptEvent,		/* 8: Client API FreeRTOS_accept() waiting for client connections. */
+	eTCPNetStat,			/* 9: IP-task is asked to produce a netstat listing. */
+	eSocketBindEvent,		/*10: Send a message to the IP-task to bind a socket to a port. */
+	eSocketCloseEvent,		/*11: Send a message to the IP-task to close a socket. */
+	eSocketSelectEvent,		/*12: Send a message to the IP-task for select(). */
+	eSocketSignalEvent,		/*13: A socket must be signalled. */
 } eIPEvent_t;
 
 typedef struct IP_TASK_COMMANDS
@@ -433,6 +434,13 @@ extern const BaseType_t xBufferAllocFixedSize;
 #if ( ipconfigUSE_TCP == 1 )
 	extern List_t xBoundTCPSocketsList;
 #endif
+
+/*
+ * NOT A PUBLIC API FUNCTION.
+ * It will be called when the DHCP timer expires, or when
+ * data has been received on the DHCP socket.
+ */
+void vDHCPProcess( BaseType_t xReset, eIPEvent_t eEventType );
 
 /* The local IP address is accessed from within xDefaultPartUDPPacketHeader,
 rather than duplicated in its own variable. */

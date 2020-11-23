@@ -529,11 +529,11 @@ FF_Error_t FF_Partition( FF_Disk_t *pxDisk, FF_PartitionParameters_t *pParams )
 			ulSummedSizes += pParams->xSizes[ xPartitionNumber ];
 		}
 	}
-	/* _HT_ xPartitionCount is at most 'ffconfigMAX_PARTITIONS' */
+	/* xPartitionCount is at most 'ffconfigMAX_PARTITIONS' */
 	if( xPartitionCount == 0 )
 	{
 		xPartitionCount = 1;
-		/* _HT_ 'ffconfigMAX_PARTITIONS' must be 1 or more. */
+		/* 'ffconfigMAX_PARTITIONS' must be 1 or more. */
 		if( pParams->eSizeType == eSizeIsSectors)
 		{
 			pParams->xSizes[ 0 ] = pParams->ulSectorCount;
