@@ -1,0 +1,10 @@
+//arch = zynqmp; split = false; format = BIN
+the_ROM_image:
+{
+	[fsbl_config]a53_x64
+	[bootloader]E:\baidu_3eg\2019\EdgeBoard_ZU3\EdgeBoard_ZU3.sdk\fsbl\Debug\fsbl.elf
+	[pmufw_image]E:\baidu_3eg\2019\EdgeBoard_ZU3\fsbl\pmufw.elf
+	[destination_device = pl]E:\baidu_3eg\2019\EdgeBoard_ZU3\EdgeBoard_ZU3.sdk\top_hw_platform_0\top.bit
+	[destination_cpu = a53-0, exception_level = el-3, trustzone]E:\baidu_3eg\2019\EdgeBoard_ZU3\fsbl\bl31.elf
+	[destination_cpu = a53-0, exception_level = el-2]E:\baidu_3eg\2019\EdgeBoard_ZU3\fsbl\u-boot.elf
+}

@@ -1,0 +1,122 @@
+{
+  "psConfig": {
+    "container": {
+      "name": "ps",
+      "apmNodes": [
+        {
+          "id": "psu_apm_0",
+          "name": "psu_apm_0",
+          "isSelected": true,
+          "apmSlots": [
+            {
+              "id": "SLOT_0_AXI",
+              "name": "SLOT_0",
+              "slotNo": 0,
+              "isSelected": true
+            },
+            {
+              "id": "SLOT_1_AXI",
+              "name": "SLOT_1",
+              "slotNo": 1,
+              "isSelected": false
+            },
+            {
+              "id": "SLOT_2_AXI",
+              "name": "SLOT_2",
+              "slotNo": 2,
+              "isSelected": false
+            },
+            {
+              "id": "SLOT_3_AXI",
+              "name": "SLOT_3",
+              "slotNo": 3,
+              "isSelected": false
+            },
+            {
+              "id": "SLOT_4_AXI",
+              "name": "SLOT_4",
+              "slotNo": 4,
+              "isSelected": false
+            },
+            {
+              "id": "SLOT_5_AXI",
+              "name": "SLOT_5",
+              "slotNo": 5,
+              "isSelected": false
+            }
+          ],
+          "baseAddr": "0xFD0B0000",
+          "frequency": "100000000",
+          "isProfilingEnabled": false,
+          "isAdvancedEnabled": true,
+          "isPsuApm": true,
+          "countersWidth": 10
+        },
+        {
+          "id": "psu_apm_1",
+          "name": "psu_apm_1",
+          "isSelected": true,
+          "apmSlots": [
+            {
+              "id": "SLOT_0_AXI",
+              "name": "SLOT_0",
+              "slotNo": 0,
+              "isSelected": true
+            }
+          ],
+          "baseAddr": "0xFFA00000",
+          "frequency": "100000000",
+          "isProfilingEnabled": false,
+          "isAdvancedEnabled": true,
+          "isPsuApm": true,
+          "countersWidth": 8
+        },
+        {
+          "id": "psu_apm_2",
+          "name": "psu_apm_2",
+          "isSelected": true,
+          "apmSlots": [
+            {
+              "id": "SLOT_0_AXI",
+              "name": "SLOT_0",
+              "slotNo": 0,
+              "isSelected": true
+            }
+          ],
+          "baseAddr": "0xFFA10000",
+          "frequency": "100000000",
+          "isProfilingEnabled": false,
+          "isAdvancedEnabled": true,
+          "isPsuApm": true,
+          "countersWidth": 8
+        },
+        {
+          "id": "psu_apm_5",
+          "name": "psu_apm_5",
+          "isSelected": true,
+          "apmSlots": [
+            {
+              "id": "SLOT_0_AXI",
+              "name": "SLOT_0",
+              "slotNo": 0,
+              "isSelected": true
+            }
+          ],
+          "baseAddr": "0xFD490000",
+          "frequency": "100000000",
+          "isProfilingEnabled": false,
+          "isAdvancedEnabled": true,
+          "isPsuApm": true,
+          "countersWidth": 8
+        }
+      ]
+    }
+  },
+  "plConfig": {
+    "otherContainer": {
+      "name": "other",
+      "apmNodes": []
+    },
+    "mdmContainers": []
+  }
+}
