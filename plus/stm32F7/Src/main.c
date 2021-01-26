@@ -169,6 +169,8 @@ RNG_HandleTypeDef hrng;
 
 int verboseLevel;
 
+BaseType_t xRandom32( uint32_t *pulValue );
+
 FF_Disk_t *pxSDDisk;
 #if( mainHAS_RAMDISK != 0 )
 	static FF_Disk_t *pxRAMDisk;

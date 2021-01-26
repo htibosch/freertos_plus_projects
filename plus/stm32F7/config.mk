@@ -9,7 +9,8 @@ ipconfigUSE_IPv6=false
 #GCC_BIN=C:/Ac6/7.2.1-1.1-20180401-0515/bin
 GCC_PREFIX=arm-none-eabi
 
-GCC_BIN=$(HOME)/Ac6/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.17.0.201812190825/tools/compiler/bin
+# GCC_BIN=$(HOME)/Ac6/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.17.0.201812190825/tools/compiler/bin
+GCC_BIN=C:/Ac6_v2.8/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin
 
 C_SRCS =
 S_SRCS =
@@ -74,8 +75,6 @@ FREERTOS_PATH = \
 FREERTOS_PORT_PATH = \
 	$(FREERTOS_ROOT)/portable/GCC/ARM_CM7/r0p1
 
-TCP_UTILITIES=$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-multi/tools/tcp_utilities
-
 # The following can not be used for this M7_r0p1 :
 #
 # FREERTOS_PORT_PATH = \
@@ -106,6 +105,8 @@ else
 	PLUS_TCP_PATH = \
 		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP
 endif
+
+TCP_UTILITIES=$(PLUS_TCP_PATH)/tools/tcp_utilities
 
 ifeq ($(ipconfigUSE_IPv6),true)
 	DEFS += -D ipconfigUSE_IPv6=1
