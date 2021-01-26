@@ -185,6 +185,7 @@ static TCPServer_t *pxTCPServer = NULL;
  * Just seeds the simple pseudo random number generator.
  */
 static void prvSRand( UBaseType_t ulSeed );
+uint32_t ulInitialSeed;
 
 static SemaphoreHandle_t xServerSemaphore;
 
@@ -323,6 +324,28 @@ uint32_t ulSeed;
 //		prvSRand( ulSeed );
 //	}
 
+	{
+		/* Enable the clock for the RNG. */
+		__HAL_RCC_RNG_CLK_ENABLE();
+		RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
+		RNG->CR |= RNG_CR_RNGEN;
+
+		/* Set the Instance pointer. */
+		hrng.Instance = RNG;
+		/* Initialise it. */
+		HAL_RNG_Init( &hrng );
+		/* Get a random number. */
+		HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed );
+		/* And pass it to the rand() function. */
+//		vSRand( ulSeed );
+	}
+
+	hrng.Instance = RNG;
+	HAL_RNG_Init( &hrng );
+	xRandom32( &ulSeed );
+	prvSRand( ulSeed );
+	ulInitialSeed = ulSeed;
+
 	/* Initialise the network interface.
 
 	***NOTE*** Tasks that use the network are created in the network event hook
@@ -390,6 +413,51 @@ uint32_t ulSeed;
 	}
 }
 /*-----------------------------------------------------------*/
+
+void HAL_RNG_MspInit(RNG_HandleTypeDef *hrng)
+{
+	( void ) hrng;
+//	RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
+	__HAL_RCC_RNG_CLK_ENABLE();
+
+//	PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+//	PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+//	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+	/* Enable RNG clock source */
+	RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
+	
+	/* RNG Peripheral enable */
+	RNG->CR |= RNG_CR_RNGEN;
+
+	/*Select PLLQ output as RNG clock source */
+//	PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RNG;
+//	PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_PLL;
+//	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
+}
+
+BaseType_t xApplicationGetRandomNumber( uint32_t *pulValue )
+{
+HAL_StatusTypeDef xResult;
+BaseType_t xReturn;
+uint32_t ulValue;
+
+	xResult = HAL_RNG_GenerateRandomNumber( &hrng, &ulValue );
+	if( xResult == HAL_OK )
+	{
+		xReturn = pdPASS;
+		*pulValue = ulValue;
+	}
+	else
+	{
+		xReturn = pdFAIL;
+	}
+	return xReturn;
+}
+
+BaseType_t xRandom32( uint32_t *pulValue )
+{
+	return xApplicationGetRandomNumber( pulValue );
+}
 static void prvCreateDiskAndExampleFiles( void )
 {
 #if( mainHAS_RAMDISK != 0 )
@@ -1022,11 +1090,11 @@ static BaseType_t xTasksAlreadyCreated = pdFALSE;
 			/* Print out the network configuration, which may have come from a DHCP
 			server. */
 			FreeRTOS_printf( ( "IP-address : %lxip (default %lxip)\n",
-				FreeRTOS_ntohl( pxEndPoint->ulIPAddress ), FreeRTOS_ntohl( pxEndPoint->ulDefaultIPAddress ) ) );
-			FreeRTOS_printf( ( "Net mask   : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ulNetMask ) ) );
-			FreeRTOS_printf( ( "GW         : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ulGatewayAddress ) ) );
-			FreeRTOS_printf( ( "DNS        : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ulDNSServerAddresses[ 0 ] ) ) );
-			FreeRTOS_printf( ( "Broadcast  : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ulBroadcastAddress ) ) );
+				FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulIPAddress ), FreeRTOS_ntohl( pxEndPoint->ipv4_defaults.ulIPAddress ) ) );
+			FreeRTOS_printf( ( "Net mask   : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulNetMask ) ) );
+			FreeRTOS_printf( ( "GW         : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulGatewayAddress ) ) );
+			FreeRTOS_printf( ( "DNS        : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulDNSServerAddresses[ 0 ] ) ) );
+			FreeRTOS_printf( ( "Broadcast  : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulBroadcastAddress ) ) );
 			FreeRTOS_printf( ( "MAC address: %02x-%02x-%02x-%02x-%02x-%02x\n",
 				pxEndPoint->xMACAddress.ucBytes[ 0 ],
 				pxEndPoint->xMACAddress.ucBytes[ 1 ],
@@ -1083,13 +1151,6 @@ static void prvSRand( UBaseType_t ulSeed )
 {
 	/* Utility function to seed the pseudo random number generator. */
 	ulNextRand = ulSeed;
-}
-/*-----------------------------------------------------------*/
-
-BaseType_t xApplicationGetRandomNumber( uint32_t *pulNumber )
-{
-	*pulNumber = uxRand();
-	return pdTRUE;
 }
 /*-----------------------------------------------------------*/
 

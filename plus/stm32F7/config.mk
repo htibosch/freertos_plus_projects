@@ -24,6 +24,9 @@ USE_FREERTOS_PLUS=true
 # ChaN's FS versus +FAT
 USE_PLUS_FAT=true
 
+TCP_SOURCE=
+#TCP_SOURCE=/Source
+
 USE_IPERF=false
 
 SMALL_SIZE=false
@@ -33,7 +36,11 @@ USE_LOG_EVENT=true
 ipconfigUSE_HTTP=false
 ipconfigUSE_FTP=true
 
-USE_TCP_MEM_STATS=true
+USE_TCP_MEM_STATS=false
+
+ifeq ($(ipconfigMULTI_INTERFACE),false)
+	ipconfigUSE_IPv6=false
+endif
 
 # The word 'fireworks' here can be replaced by any other string
 # Others would write 'foo'
@@ -67,6 +74,8 @@ FREERTOS_PATH = \
 FREERTOS_PORT_PATH = \
 	$(FREERTOS_ROOT)/portable/GCC/ARM_CM7/r0p1
 
+TCP_UTILITIES=$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-multi/tools/tcp_utilities
+
 # The following can not be used for this M7_r0p1 :
 #
 # FREERTOS_PORT_PATH = \
@@ -80,7 +89,8 @@ INC_RTOS = \
 	$(PRJ_PATH)/$(ST_Library)/include/ \
 	$(FREERTOS_PORT_PATH)/ \
 	$(FREERTOS_ROOT)/include/ \
-	$(FREERTOS_ROOT)/CMSIS_RTOS/
+	$(FREERTOS_ROOT)/CMSIS_RTOS/ \
+	$(TCP_UTILITIES)/include/
 
 PLUS_FAT_PATH = \
 	$(ROOT_PATH)/Framework/FreeRTOS-Plus-FAT
@@ -92,6 +102,7 @@ ifeq ($(ipconfigMULTI_INTERFACE),true)
 		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-multi
 else
 	DEFS += -D ipconfigMULTI_INTERFACE=0
+	ipconfigUSE_IPv6=false
 	PLUS_TCP_PATH = \
 		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP
 endif
@@ -103,7 +114,7 @@ else
 endif
 
 PROTOCOLS_PATH = \
-	$(PLUS_TCP_PATH)/source/protocols
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/Protocols
 
 #PLUS_TCP_PATH = \
 #	$(PRJ_PATH)/Middlewares/Third_Party/FreeRTOS-Plus-TCP
@@ -113,12 +124,14 @@ INC_PATH = \
 	$(PRJ_PATH)/Inc/ \
 	$(INC_RTOS)/ \
 	$(PLUS_TCP_PATH)/include/ \
-	$(PLUS_TCP_PATH)/source/portable/Compiler/GCC/ \
-	$(PLUS_TCP_PATH)/source/protocols/include/ \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/include/ \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/Compiler/GCC/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/protocols/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/ \
+	$(PLUS_TCP_PATH)/tools/tcp_utilities/include/ \
 	$(PRJ_PATH)/Third_Party/USB/ \
 	$(ROOT_PATH)/Framework/Utilities/include/ \
+	$(ROOT_PATH)/Common/Utilities/ \
 	$(ROOT_PATH)/Common/Utilities/include/
 
 S_SRCS += \
@@ -220,42 +233,42 @@ DEFS += -DLOGBUF_AVG_LEN=72
 
 
 C_SRCS += \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_ARP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_DHCP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_DNS.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_IP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_Sockets.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_Stream_Buffer.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_IP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_WIN.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_UDP_IP.c \
-	$(PLUS_TCP_PATH)/source/portable/BufferManagement/BufferAllocation_1.c \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_ARP.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_DHCP.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_DNS.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_IP.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Sockets.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Stream_Buffer.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_TCP_IP.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_TCP_WIN.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_UDP_IP.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/BufferManagement/BufferAllocation_1.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c \
 	$(ROOT_PATH)/Common/Utilities/UDPLoggingPrintf.c \
-	$(ROOT_PATH)/Common/Utilities/date_and_time.c \
+	$(TCP_UTILITIES)/date_and_time.c \
 	$(ROOT_PATH)/Common/Utilities/plus_echo_client.c \
 	$(ROOT_PATH)/Common/Utilities/plus_echo_server.c
 
 
 ifeq ($(USE_TCP_MEM_STATS),true)
 	C_SRCS += \
-		$(PLUS_TCP_PATH)/tools/tcp_mem_stats.c
+		$(TCP_UTILITIES)/tcp_mem_stats.c
 	DEFS += -DipconfigUSE_TCP_MEM_STATS
 endif
 
 C_SRCS += \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Common/phyHandling.c
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/Common/phyHandling.c
 
 ifeq ($(ipconfigMULTI_INTERFACE),true)
 	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_Routing.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/loopback/NetworkInterface.c
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Routing.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/loopback/NetworkInterface.c
 endif
 
 ifeq ($(ipconfigUSE_IPv6),true)
 	C_SRCS += \
-		$(PLUS_TCP_PATH)/FreeRTOS_ND.c
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_ND.c
 endif
 
 C_SRCS += \
@@ -274,13 +287,13 @@ C_SRCS += \
 	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rcc.c \
 	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rcc_ex.c \
 	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_tim.c \
+	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rng.c \
 	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_gpio.c
 	
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_i2c.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_nor.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_pwr.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_pwr_ex.c \
-#	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rng.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rtc.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_rtc_ex.c \
 #	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal_sram.c \

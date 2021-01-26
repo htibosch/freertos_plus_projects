@@ -23,7 +23,7 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.board.1234216965" name="Board" superClass="fr.ac6.managedbuild.option.gnu.cross.board"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1381064728" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross.1321599939" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
-							<builder arguments="-j 8" buildPath="/home/hein/work/plus/stm32F7" command="make" id="fr.ac6.managedbuild.builder.gnu.cross.314886413" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
+							<builder arguments="SHELL=cmd.exe --jobs 8" buildPath="/home/hein/work/plus/stm32F7" command="make" id="fr.ac6.managedbuild.builder.gnu.cross.314886413" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1224561562" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler">
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.1751137425" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.566776732" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
