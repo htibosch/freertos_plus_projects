@@ -1,0 +1,4 @@
+THIRPARTY=false
+HW_PROJECT_REFERENCE=FZ3_PL
+PROCESSOR=psu_cortexa53_0
+MSS_FILE=system.mss

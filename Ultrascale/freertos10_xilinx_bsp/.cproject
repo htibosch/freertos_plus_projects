@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="org.eclipse.cdt.core.default.config.218064601">
+			<storageModule buildSystemId="org.eclipse.cdt.core.defaultConfigDataProvider" id="org.eclipse.cdt.core.default.config.218064601" moduleId="org.eclipse.cdt.core.settings" name="Configuration">
+				<externalSettings/>
+				<extensions/>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="scannerConfiguration"/>
+	<storageModule moduleId="org.eclipse.cdt.core.pathentry">
+		<pathentry excluding="psu_cortexa53_0/libsrc/emacps_v3_9/src/xemacps_bdring.c|psu_cortexa53_0/libsrc/emacps_v3_9/src/xemacps_sinit.c|psu_cortexa53_0/libsrc/standalone_v7_0/src/asm_vectors.S|psu_cortexa53_0/libsrc/emacps_v3_9/src/xemacps_hw.c" kind="src" path=""/>
+		<pathentry kind="out" path=""/>
+	</storageModule>
+</cproject>

@@ -1,0 +1,64 @@
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+# Add inputs and outputs from these tool invocations to the build variables 
+C_SRCS += \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/NetworkInterface.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/uncached_memory.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_dma.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_hw.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.c 
+
+OBJS += \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/NetworkInterface.o \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/uncached_memory.o \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_dma.o \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_hw.o \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.o 
+
+C_DEPS += \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/NetworkInterface.d \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/uncached_memory.d \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_dma.d \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_hw.d \
+./src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.d 
+
+
+# Each subdirectory must supply rules for building sources it contributes
+src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/NetworkInterface.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/NetworkInterface.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/uncached_memory.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/uncached_memory.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_dma.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_dma.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_hw.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_hw.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+

@@ -1,0 +1,104 @@
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+# Add inputs and outputs from these tool invocations to the build variables 
+C_SRCS += \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_ARP.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_DHCP.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_DNS.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_IP.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_Sockets.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_Stream_Buffer.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_TCP_IP.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_TCP_WIN.c \
+C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_UDP_IP.c 
+
+OBJS += \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_ARP.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_DHCP.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_DNS.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_IP.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_Sockets.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_Stream_Buffer.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_IP.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_WIN.o \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_UDP_IP.o 
+
+C_DEPS += \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_ARP.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_DHCP.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_DNS.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_IP.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_Sockets.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_Stream_Buffer.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_IP.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_WIN.d \
+./src/FreeRTOS-Plus-TCP/FreeRTOS_UDP_IP.d 
+
+
+# Each subdirectory must supply rules for building sources it contributes
+src/FreeRTOS-Plus-TCP/FreeRTOS_ARP.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_ARP.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_DHCP.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_DHCP.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_DNS.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_DNS.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_IP.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_IP.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_Sockets.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_Sockets.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_Stream_Buffer.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_Stream_Buffer.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_IP.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_TCP_IP.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_TCP_WIN.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_TCP_WIN.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+src/FreeRTOS-Plus-TCP/FreeRTOS_UDP_IP.o: C:/Work/Sources/3rd_Party/FreeRTOS/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_UDP_IP.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: ARM v8 gcc compiler'
+	aarch64-none-elf-gcc -Wall -O0 -g3 -I"C:\Work\Solutions\Test_tcp\FZ3_app\src" -c -fmessage-length=0 -MT"$@" -I../../freertos10_xilinx_bsp/psu_cortexa53_0/include -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+
