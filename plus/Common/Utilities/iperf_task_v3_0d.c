@@ -710,7 +710,7 @@ BaseType_t xRecvResult;
 		ulUDPRecvCount += xLength;
 		#if( ipconfigIPERF_DOES_ECHO_UDP != 0 )
 		{
-			FreeRTOS_sendto( xSocket, (const void *)pcRecvBuffer, xLength, 0, pxFrom, sizeof( *pxFrom ) );
+			FreeRTOS_sendto( xSocket, (const void *)pvData, xLength, 0, pxFrom, sizeof( *pxFrom ) );
 		}
 		#else /* ipconfigIPERF_DOES_ECHO_UDP */
 		{
