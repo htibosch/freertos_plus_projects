@@ -346,6 +346,8 @@ messages. */
 
 #define ipconfigCHECK_IP_QUEUE_SPACE			1
 
+#define USE_IPERF                               1
+
 #define ipconfigIPERF_DOES_ECHO_UDP		        0
 
 #define ipconfigIPERF_VERSION					3
@@ -400,10 +402,10 @@ the performance of other TCP/IP stack activity. */
 /* The local UDP port to which commands can be sent. */
 #define configUDP_LOGGING_PORT_LOCAL		2402
 
-#define configUDP_LOGGING_ADDR0			192
-#define configUDP_LOGGING_ADDR1			168
-#define configUDP_LOGGING_ADDR2			2
-#define configUDP_LOGGING_ADDR3			5
+//#define configUDP_LOGGING_ADDR0			192
+//#define configUDP_LOGGING_ADDR1			168
+//#define configUDP_LOGGING_ADDR2			2
+//#define configUDP_LOGGING_ADDR3			5
 
 #define ipconfigSOCKET_HAS_USER_SEMAPHORE		1
 
