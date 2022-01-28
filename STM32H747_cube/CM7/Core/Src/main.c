@@ -50,6 +50,8 @@ static void vStartRandomGenerator( void );
 
 #define mainTCP_SERVER_STACK_SIZE	640
 
+static void MPU_Config( void );
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -87,13 +89,14 @@ int32_t timeout = 0xFFFF;
 	{
 		Error_Handler();
 	}
+
 	/* Enable I-Cache */
 	SCB_EnableICache();
 
+    /* Make the AXI memory non-cacheable */
+    MPU_Config();
 	/* Enable D-Cache */
-	/* _HT_ This project has not been tested with data cache enabled.
-	Changes will be necessary in the network driver to make it work. */
-//	SCB_EnableDCache();
+    SCB_EnableDCache();
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
@@ -781,6 +784,12 @@ static NetworkBufferDescriptor_t *pxDescriptor = NULL;
 		}
 		FreeRTOS_printf( ( "\n" ) );
 	}
+#if ( USE_IPERF != 0 )
+    else if( strncmp( pcBuffer, "iperf", 5 ) == 0 )
+    {
+        FreeRTOS_printf( ( "iperf is already installed.\n" ) );
+    }
+#endif /* ( USE_IPERF != 0 ) */
 	else if( memcmp( pcBuffer, "mem", 3 ) == 0 )
 	{
 		uint32_t now = xPortGetFreeHeapSize( );
@@ -818,3 +827,29 @@ static NetworkBufferDescriptor_t *pxDescriptor = NULL;
 	}
 #endif
 /*-----------------------------------------------------------*/
+
+static void MPU_Config( void )
+{
+    MPU_Region_InitTypeDef MPU_InitStruct;
+
+    /*  Prohibit MPU */
+    HAL_MPU_Disable();
+
+    /*  Configure the MPU attributes of AXI SRAM as Write back, Read allocate, Write allocate */
+    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
+    MPU_InitStruct.BaseAddress      = 0x24000000;               // AXI memory where ETH descriptors and buffers are stored
+    MPU_InitStruct.Size             = MPU_REGION_SIZE_512KB;
+    MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+    MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE; // MPU_ACCESS_BUFFERABLE;
+    MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;	 // MPU_ACCESS_CACHEABLE;
+    MPU_InitStruct.IsShareable      = MPU_ACCESS_SHAREABLE; // MPU_ACCESS_NOT_SHAREABLE;
+    MPU_InitStruct.Number           = MPU_REGION_NUMBER0;
+    MPU_InitStruct.TypeExtField     = MPU_TEX_LEVEL1;
+    MPU_InitStruct.SubRegionDisable = 0x00;
+    MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_ENABLE;
+
+    HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+    /*Enable MPU */
+    HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}

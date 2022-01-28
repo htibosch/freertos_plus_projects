@@ -19,7 +19,7 @@ void vUDPLoggingFlush( void );
 #endif
 
 #if USE_MYMALLOC
-#	include "myMalloc.h"
+#	include "mymalloc.h"
 #else
 #	include "portable.h"
 #endif

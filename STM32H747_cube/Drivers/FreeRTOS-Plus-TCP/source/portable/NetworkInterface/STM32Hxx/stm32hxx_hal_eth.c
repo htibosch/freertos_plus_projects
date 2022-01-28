@@ -190,28 +190,28 @@ extern SemaphoreHandle_t xTXDescriptorSemaphore;
 /** @addtogroup ETH_Private_Constants ETH Private Constants
  * @{
  */
-		#define ETH_MACCR_MASK		 ( ( uint32_t ) 0xFFFB7F7CU )
-		#define ETH_MACECR_MASK		 ( ( uint32_t ) 0x3F077FFFU )
-		#define ETH_MACPFR_MASK		 ( ( uint32_t ) 0x800007FFU )
-		#define ETH_MACWTR_MASK		 ( ( uint32_t ) 0x0000010FU )
-		#define ETH_MACTFCR_MASK	 ( ( uint32_t ) 0xFFFF00F2U )
-		#define ETH_MACRFCR_MASK	 ( ( uint32_t ) 0x00000003U )
-		#define ETH_MTLTQOMR_MASK	 ( ( uint32_t ) 0x00000072U )
-		#define ETH_MTLRQOMR_MASK	 ( ( uint32_t ) 0x0000007BU )
+		#define ETH_MACCR_MASK       ( ( uint32_t ) 0xFFFB7F7CU )
+		#define ETH_MACECR_MASK      ( ( uint32_t ) 0x3F077FFFU )
+		#define ETH_MACPFR_MASK      ( ( uint32_t ) 0x800007FFU )
+		#define ETH_MACWTR_MASK      ( ( uint32_t ) 0x0000010FU )
+		#define ETH_MACTFCR_MASK     ( ( uint32_t ) 0xFFFF00F2U )
+		#define ETH_MACRFCR_MASK     ( ( uint32_t ) 0x00000003U )
+		#define ETH_MTLTQOMR_MASK    ( ( uint32_t ) 0x00000072U )
+		#define ETH_MTLRQOMR_MASK    ( ( uint32_t ) 0x0000007BU )
 
-		#define ETH_DMAMR_MASK		 ( ( uint32_t ) 0x00007802U )
-		#define ETH_DMASBMR_MASK	 ( ( uint32_t ) 0x0000D001U )
-		#define ETH_DMACCR_MASK		 ( ( uint32_t ) 0x00013FFFU )
-		#define ETH_DMACTCR_MASK	 ( ( uint32_t ) 0x003F1010U )
-		#define ETH_DMACRCR_MASK	 ( ( uint32_t ) 0x803F0000U )
+		#define ETH_DMAMR_MASK       ( ( uint32_t ) 0x00007802U )
+		#define ETH_DMASBMR_MASK     ( ( uint32_t ) 0x0000D001U )
+		#define ETH_DMACCR_MASK      ( ( uint32_t ) 0x00013FFFU )
+		#define ETH_DMACTCR_MASK     ( ( uint32_t ) 0x003F1010U )
+		#define ETH_DMACRCR_MASK     ( ( uint32_t ) 0x803F0000U )
 		#define ETH_MACPCSR_MASK					 \
 	( ETH_MACPCSR_PWRDWN | ETH_MACPCSR_RWKPKTEN |	 \
 	  ETH_MACPCSR_MGKPKTEN | ETH_MACPCSR_GLBLUCAST | \
 	  ETH_MACPCSR_RWKPFE )
 
 /* Timeout values */
-		#define ETH_SWRESET_TIMEOUT		( ( uint32_t ) 500U )
-		#define ETH_MDIO_BUS_TIMEOUT	( ( uint32_t ) 1000U )
+		#define ETH_SWRESET_TIMEOUT     ( ( uint32_t ) 500U )
+		#define ETH_MDIO_BUS_TIMEOUT    ( ( uint32_t ) 1000U )
 
 		#define ETH_DMARXNDESCWBF_ERRORS_MASK						\
 	( ( uint32_t ) ( ETH_DMARXNDESCWBF_DE | ETH_DMARXNDESCWBF_RE |	\
@@ -428,6 +428,26 @@ extern SemaphoreHandle_t xTXDescriptorSemaphore;
 			heth->ErrorCode = HAL_ETH_ERROR_NONE;
 			heth->gState = HAL_ETH_STATE_READY;
 			heth->RxState = HAL_ETH_STATE_READY;
+
+			/*
+			 * Disable the interrupts that are related to the MMC counters.
+			 * These interrupts are enabled by default. The interrupt can
+			 * only be acknowledged by reading the corresponding counter.
+			 */
+
+			heth->Instance->MMCRIMR =
+				ETH_MMCRIMR_RXLPITRCIM |  /* RXLPITRC */
+				ETH_MMCRIMR_RXLPIUSCIM |  /* RXLPIUSC */
+				ETH_MMCRIMR_RXUCGPIM |    /* RXUCASTG */
+				ETH_MMCRIMR_RXALGNERPIM | /* RXALGNERR */
+				ETH_MMCRIMR_RXCRCERPIM;   /* RXCRCERR */
+
+			heth->Instance->MMCTIMR =
+				ETH_MMCTIMR_TXLPITRCIM | /* TXLPITRC */
+				ETH_MMCTIMR_TXLPIUSCIM | /* TXLPIUSC */
+				ETH_MMCTIMR_TXGPKTIM |   /* TXPKTG */
+				ETH_MMCTIMR_TXMCOLGPIM | /* TXMULTCOLG */
+				ETH_MMCTIMR_TXSCOLGPIM;  /* TXSNGLCOLG */
 
 			return HAL_OK;
 		}
@@ -1001,83 +1021,6 @@ extern SemaphoreHandle_t xTXDescriptorSemaphore;
 			}
 		}
 
-/**
- * @brief  Sends an Ethernet Packet in polling mode.
- * @param  heth: pointer to a ETH_HandleTypeDef structure that contains
- *         the configuration information for ETHERNET module
- * @param  pTxConfig: Hold the configuration of packet to be transmitted
- * @param  Timeout: timeout value
- * @retval HAL status
- */
-		HAL_StatusTypeDef HAL_ETH_Transmit( ETH_HandleTypeDef * heth,
-											ETH_TxPacketConfig * pTxConfig,
-											uint32_t Timeout )
-		{
-			uint32_t tickstart;
-			const ETH_DMADescTypeDef * dmatxdesc;
-
-			if( pTxConfig == NULL )
-			{
-				heth->ErrorCode |= HAL_ETH_ERROR_PARAM;
-				return HAL_ERROR;
-			}
-
-			if( heth->gState == HAL_ETH_STATE_READY )
-			{
-				/* Config DMA Tx descriptor by Tx Packet info */
-				if( ETH_Prepare_Tx_Descriptors( heth, pTxConfig, 0 ) != HAL_ETH_ERROR_NONE )
-				{
-					/* Set the ETH error code */
-					heth->ErrorCode |= HAL_ETH_ERROR_BUSY;
-					return HAL_ERROR;
-				}
-
-				dmatxdesc = ( ETH_DMADescTypeDef * ) ( &heth->TxDescList )->TxDesc[ heth->TxDescList.CurTxDesc ];
-
-				/* Incr current tx desc index */
-				INCR_TX_DESC_INDEX( heth->TxDescList.CurTxDesc, 1U );
-
-				/* Start transmission */
-				/* issue a poll command to Tx DMA by writing address of next immediate free descriptor */
-				WRITE_REG( heth->Instance->DMACTDTPR, ( uint32_t ) ( heth->TxDescList.TxDesc[ heth->TxDescList.CurTxDesc ] ) );
-
-				READ_REG( heth->Instance->DMACTDTPR );
-
-				tickstart = HAL_GetTick();
-
-				/* Wait for data to be transmitted or timeout occured */
-				while( ( dmatxdesc->DESC3 & ETH_DMATXNDESCWBF_OWN ) != ( uint32_t ) RESET )
-				{
-					if( ( heth->Instance->DMACSR & ETH_DMACSR_FBE ) != ( uint32_t ) RESET )
-					{
-						heth->ErrorCode |= HAL_ETH_ERROR_DMA;
-						heth->DMAErrorCode = heth->Instance->DMACSR;
-						/* Set ETH HAL State to Ready */
-						set_error_state( heth, HAL_ETH_STATE_ERROR );
-						/* Return function status */
-						return HAL_ERROR;
-					}
-
-					/* Check for the Timeout */
-					if( Timeout != HAL_MAX_DELAY )
-					{
-						if( ( ( HAL_GetTick() - tickstart ) > Timeout ) || ( Timeout == 0U ) )
-						{
-							heth->ErrorCode |= HAL_ETH_ERROR_TIMEOUT;
-							set_error_state( heth, HAL_ETH_STATE_ERROR );
-							return HAL_ERROR;
-						}
-					}
-				}
-
-				/* Return function status */
-				return HAL_OK;
-			}
-			else
-			{
-				return HAL_ERROR;
-			}
-		}
 
 /**
  * @brief  Sends an Ethernet Packet in interrupt mode.
@@ -2873,6 +2816,8 @@ extern SemaphoreHandle_t xTXDescriptorSemaphore;
 						}
 
 						pxNetworkBuffer = pxPacketBuffer_to_NetworkBuffer( ucPayLoad );
+
+						configASSERT( pxNetworkBuffer != NULL );
 
 						if( pxNetworkBuffer != NULL )
 						{
