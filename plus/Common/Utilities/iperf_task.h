@@ -27,9 +27,17 @@
 
 #define IPERF_TASK_H_
 
+#ifdef __cplusplus
+	extern "C" {
+#endif 
+
 /* This function will start a task that will handle all IPERF requests from outside.
 Call it after the IP-stack is up and running. */
 
 void vIPerfInstall( void );
+
+#ifdef __cplusplus
+	} /* extern "C" */
+#endif 
 
 #endif
