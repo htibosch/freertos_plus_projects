@@ -557,7 +557,7 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 					"\"cpu_util_total\":0,"
 					"\"cpu_util_user\":0,"
 					"\"cpu_util_system\":0,"
-					"\"sender_has_retransmits\":-1,"
+					"\"sender_has_retransmits\":0,"
 					"\"streams\":["
 						"{"
 							"\"id\":1,"
@@ -590,8 +590,6 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 static void vIPerfTCPWork( TcpClient_t *pxClient )
 {
 BaseType_t xRecvResult;
-//#warning take away
-//BaseType_t xLogged = pdFALSE;
 
 	if( pxClient->xServerSocket == NULL )
 	{
