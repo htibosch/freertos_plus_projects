@@ -10,7 +10,7 @@
  *  Changes for the FreeRTOS ports:
  *
  *  - The dot in "%-8.8s"
- *  - The specifiers 'l' (long) and 'L' (long long)
+ *  - The specifiers 'l' (long) and 'L' (int64_t)
  *  - The specifier 'u' for unsigned
  *  - Dot notation for IP addresses:
  *    sprintf("IP = %xip\n", 0xC0A80164);
@@ -73,7 +73,7 @@ int tiny_printf( const char * format,
                  ... );
 
 /* Defined here: write a large amount as GB, MB, KB or bytes */
-const char * mkSize( unsigned long long aSize,
+const char * mkSize( uint64_t aSize,
                      char * apBuf,
                      int aLen );
 
@@ -315,54 +315,85 @@ static BaseType_t prints( struct SStringBuf * apBuf,
 #define PRINT_BUF_LEN    12 /* to print 4294967296 */
 
 #if SPRINTF_LONG_LONG
-    #warning 64-bit libraries will be included as well
+
+/* Add an unsigned version of 'lldiv()'.
+ * In an earlier version, the signed lldiv() was used,
+ * which led to corrupted output. */
+
+typedef struct xlldiv_t
+{
+	uint64_t quot;   // quotient
+	uint64_t rem;    // remainder
+}
+uns_lldiv_t;
+
+static uns_lldiv_t uns_lldiv (uint64_t number, uint64_t denom)
+{
+	uns_lldiv_t rc;
+	// e.g. 10 / 4 = 2
+	rc.quot = number / denom;
+	// e.g. 10 - 2 x 4 = 2
+	rc.rem = number - rc.quot * denom;
+	return rc;
+}
+
+/*  #warning 64-bit libraries will be included as well. */
     static BaseType_t printll( struct SStringBuf * apBuf,
-                               long long i )
+                               int64_t i )
     {
         char print_buf[ 2 * PRINT_BUF_LEN ];
         register char * s;
-        register int t, neg = 0;
-        register unsigned long long u = i;
-        lldiv_t lldiv_result;
-
-/* typedef struct
- * {
- *  long long int quot; // quotient
- *  long long int rem;  // remainder
- * } lldiv_t;
- */
+        register unsigned t, neg;
+		register uint64_t u;
+		uns_lldiv_t lldiv_result;
 
         apBuf->flags.isNumber = pdTRUE; /* Parameter for prints */
 
-        if( i == 0LL )
+		if( i == 0 )
         {
+			/* The number zero. */
             print_buf[ 0 ] = '0';
             print_buf[ 1 ] = '\0';
             return prints( apBuf, print_buf );
         }
 
-        if( ( apBuf->flags.isSigned == pdTRUE ) && ( apBuf->flags.base == 10 ) && ( i < 0LL ) )
+		if( ( apBuf->flags.isSigned == pdTRUE ) && ( apBuf->flags.base == 10 ) && ( i < 0 ) )
         {
             neg = 1;
-            u = -i;
+			u = ( uint64_t ) -i;
+		}
+		else
+		{
+			neg = 0;
+			u = ( uint64_t ) i;
         }
 
+        /* Numbers are written from right to left. */
         s = print_buf + sizeof print_buf - 1;
 
         *s = '\0';
 
-        /* 18446744073709551616 */
+        /* Biggest 64-bit number 18446744073709551615 */
         while( u != 0 )
         {
-            lldiv_result = lldiv( u, ( unsigned long long ) apBuf->flags.base );
+            lldiv_result = uns_lldiv( u, ( uint64_t ) apBuf->flags.base );
             t = lldiv_result.rem;
 
-            if( t >= 10 )
+			if( t < 10 )
             {
-                t += apBuf->flags.letBase - '0' - 10;
+				/* '0' to '9' */
+				*( --s ) = t + '0';
+			}
+			else if( t < apBuf->flags.base )
+            {
+				/* 'A' to 'F' */
+				*( --s ) = t - 10 + apBuf->flags.letBase;
+            }
+			else
+			{
+				/* Unexpected: the remainder is larger than the divisor. */
             }
 
-            *( --s ) = t + '0';
             u = lldiv_result.quot;
         }
 
@@ -749,7 +780,7 @@ static void tiny_print( struct SStringBuf * apBuf,
             #if SPRINTF_LONG_LONG
                 if( apBuf->flags.long64 != pdFALSE )
                 {
-                    if( printll( apBuf, va_arg( args, long long ) ) == 0 )
+                    if( printll( apBuf, va_arg( args, int64_t ) ) == 0 )
                     {
                         break;
                     }
@@ -794,7 +825,7 @@ static void tiny_print( struct SStringBuf * apBuf,
             #if SPRINTF_LONG_LONG
                 if( apBuf->flags.long64 != pdFALSE )
                 {
-                    if( printll( apBuf, va_arg( args, long long ) ) == 0 )
+                    if( printll( apBuf, va_arg( args, int64_t ) ) == 0 )
                     {
                         break;
                     }
@@ -890,7 +921,7 @@ int vsprintf( char * apBuf,
 }
 /*-----------------------------------------------------------*/
 
-const char * mkSize( unsigned long long aSize,
+const char * mkSize( uint64_t aSize,
                      char * apBuf,
                      int aLen )
 {
@@ -930,6 +961,29 @@ const char * mkSize( unsigned long long aSize,
     }
 
     return apBuf;
+}
+
+const char *mkTime (unsigned aTime, char *apBuf, int aLen)	/* Argument in uS */
+{
+	/* Must be static because it might be returned. */
+	static char mySprintfRetString[33];
+	if (apBuf == NULL) {
+		apBuf = mySprintfRetString;
+		aLen = sizeof mySprintfRetString;
+	}
+	unsigned sec = aTime / (1000*1000);
+	aTime -= sec * (1000*1000);
+	unsigned ms = aTime / (1000);
+	aTime -= ms * (1000);
+	unsigned us = aTime;
+	if (sec) {
+		snprintf (apBuf, aLen, "%u.%02u S", ( unsigned ) sec, ( unsigned ) ( (100 * ms) / 1000 ) );
+	} else if (ms) {
+		snprintf (apBuf, aLen, "%u.%02u mS", ( unsigned ) ms, ( unsigned ) ( (100 * us) / 1000 ) );
+	} else {
+		snprintf (apBuf, aLen, "%u uS", ( unsigned ) us);
+	}
+	return apBuf;
 }
 
 #ifdef _MSC_VER
