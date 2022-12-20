@@ -76,6 +76,10 @@
 	#include "iperf_task.h"
 #endif
 
+#if ( USE_TELNET != 0 )
+	#include "telnet.h"
+	extern void xSetupTelnet();
+#endif
 //#define __STM32_HAL_LEGACY   1
 #include "date_and_time.h"
 
@@ -609,6 +613,21 @@ static void prvCreateDiskAndExampleFiles( void )
 		vTaskDelete( NULL );
 	}
 
+#if ( USE_TELNET != 0 )
+	Telnet_t * pxTelnetHandle = NULL;
+
+	void vUDPLoggingHook( const char * pcMessage,
+						  BaseType_t xLength )
+	{
+		if( ( pxTelnetHandle != NULL ) && ( pxTelnetHandle->xClients != NULL ) )
+		{
+/* Skip the telnet logging. */
+/*#warning Skip the telnet logging */
+			xTelnetSend( pxTelnetHandle, NULL, pcMessage, xLength );
+		}
+	}
+#endif /* if ( USE_TELNET != 0 ) */
+
 #if( ipconfigUSE_DHCP_HOOK != 0 )
 	eDHCPCallbackAnswer_t xApplicationDHCPHook( eDHCPCallbackPhase_t eDHCPPhase, uint32_t ulIPAddress )
 	{
@@ -833,6 +852,11 @@ static void prvCreateDiskAndExampleFiles( void )
 		xServerSemaphore = xSemaphoreCreateBinary();
 		char pcBuffer[ 64 ];
 
+		#if ( USE_TELNET != 0 )
+			Telnet_t xTelnet;
+			memset( &xTelnet, '\0', sizeof xTelnet );
+		#endif
+
 		for( ;; )
 		{
 			if (xStartServices == EStartupStart) {
@@ -887,11 +911,41 @@ static void prvCreateDiskAndExampleFiles( void )
 						ipconfigUSE_IPv6) );
 
 					FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_RCVTIMEO, &xReceiveTimeOut, sizeof( xReceiveTimeOut ) );
+				#if ( USE_TELNET != 0 )
+					{
+						extern TickType_t uxTelnetAcceptTmout;
+						uxTelnetAcceptTmout = pdMS_TO_TICKS( 0U );
+						xTelnetCreate( &xTelnet, TELNET_PORT_NUMBER );
+
+						if( xTelnet.xParentSocket != 0 )
+						{
+							FreeRTOS_setsockopt( xTelnet.xParentSocket, 0, FREERTOS_SO_SET_SEMAPHORE, ( void * ) &xServerSemaphore, sizeof( xServerSemaphore ) );
+							pxTelnetHandle = &xTelnet;
+						}
+
+						/* For testing only : start up a second telnet server. */
+/*						xSetupTelnet(); */
+					}
+					#endif /* if ( USE_TELNET != 0 ) */
 				}
 //				xCount = FreeRTOS_recvfrom( xSocket, ( void * )pcBuffer, sizeof( pcBuffer ) - 1,
 //						xHasBlocked ? 0 : FREERTOS_MSG_DONTWAIT, &xSourceAddress, &xSourceAddressLength );
 				xCount = FreeRTOS_recvfrom( xSocket, ( void * )pcBuffer, sizeof( pcBuffer ) - 1,
 						0, &xSourceAddress, &xSourceAddressLength );
+			#if ( USE_TELNET != 0 )
+				{
+					if( xCount <= 0 ) /*  && ( xTelnet.xParentSocket != NULL ) ) */
+					{
+						struct freertos_sockaddr fromAddr;
+						xCount = xTelnetRecv( &xTelnet, &fromAddr, pcBuffer, sizeof( pcBuffer ) - 1 );
+
+						if( xCount > 0 )
+						{
+							xTelnetSend( &xTelnet, &fromAddr, pcBuffer, xCount );
+						}
+					}
+				}
+			#endif /* if ( USE_TELNET != 0 ) */
 				if( xCount > 0 )
 				{
 					pcBuffer[ xCount ] = '\0';

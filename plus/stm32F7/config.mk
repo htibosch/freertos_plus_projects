@@ -66,6 +66,8 @@ USE_TCP_MEM_STATS=false
 
 USE_MBEDTLS=false
 
+USE_TELNET=true
+
 # The word 'fireworks' here can be replaced by any other string
 # Others would write 'foo'
 ROOT_PATH = $(subst /fireworks,,$(abspath ../fireworks))
@@ -381,6 +383,16 @@ else
 		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/BufferManagement/BufferAllocation_1.c \
 		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
 		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c
+endif
+
+ifeq ($(USE_TELNET),true)
+	DEFS += -DUSE_TELNET=1
+	DEFS += -DTELNET_USES_REUSE_SOCKETS=0
+	C_SRCS += \
+		$(ROOT_PATH)/Common/Utilities/telnet.c \
+		$(ROOT_PATH)/Common/Utilities/telnet_usage.c
+else
+	DEFS += -D USE_TELNET=0
 endif
 
 # Use SDRAM and let it be managed by myMalloc()
