@@ -51,6 +51,8 @@ void plus_echo_client_thread( void *parameters )
 {
 	TickType_t t1 = xTaskGetTickCount();
 
+	( void ) parameters;
+
 	xClientSemaphore = xSemaphoreCreateBinary();
 	configASSERT( xClientSemaphore != NULL );
 
@@ -145,7 +147,7 @@ int rc;
 
 			xSemaphoreTake( xClientSemaphore, xReceiveTimeOut );
 			space = FreeRTOS_tx_space( xSocket );
-			while( sendCount < CLIENT_SEND_COUNT && space >= 1460 )
+			while( sendCount < ( int ) CLIENT_SEND_COUNT && space >= 1460 )
 			{
 			int sendlength = space < length ? space : length;
 
@@ -160,7 +162,7 @@ int rc;
 
 				if( rc < sendlength )
 				{
-					FreeRTOS_printf( ( "FreeRTOS_send: only sent %lu of %lu bytes\n", rc, length ) ) ;
+					FreeRTOS_printf( ( "FreeRTOS_send: only sent %u of %u bytes\n", rc, length ) ) ;
 					break;
 				}
 				sendCount += rc;
@@ -188,7 +190,7 @@ int rc;
 					goto leave;
 				}
 			}
-			int send_ready = !plus_test_two_way || recvCount >= CLIENT_SEND_COUNT;
+			int send_ready = !plus_test_two_way || ( recvCount >= ( int ) CLIENT_SEND_COUNT );
 			if( !hasShutdown && send_ready && !left && FreeRTOS_tx_size( xSocket ) == 0 )
 			{
 				hasShutdown = pdTRUE;

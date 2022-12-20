@@ -60,6 +60,7 @@
 /* Standard includes. */
 #include <stdio.h>
 #include <time.h>
+#include <ctype.h>
 
 /* FreeRTOS includes. */
 #include <FreeRTOS.h>
@@ -139,6 +140,9 @@
 
 void vIPerfTask( void *pvParameter );
 
+/* It is not certain that sscanf() can handle a 64-bit number. */
+extern int sscanf64( char *pcString, uint64_t * pullAmount );
+
 /* As for now, still defined in 'FreeRTOS-Plus-TCP\FreeRTOS_TCP_WIN.c' : */
 extern void vListInsertGeneric( List_t * const pxList, ListItem_t * const pxNewListItem, MiniListItem_t * const pxWhere );
 static portINLINE void vListInsertFifo( List_t * const pxList, ListItem_t * const pxNewListItem )
@@ -172,7 +176,8 @@ typedef struct
 				bHasShutdown : 1;
 		} bits;
 		eTCP_Server_Status_t eTCP_Status;
-		uint32_t ulSkipCount, ulAmount;
+		uint32_t ulSkipCount;
+		uint64_t ullAmount;
 		uint32_t xRemainingTime;
 		TimeOut_t xTimeOut;
 	#endif /* ipconfigIPERF_VERSION == 3 */
@@ -329,7 +334,10 @@ BaseType_t xResult = 0;
 			}
 		}
 
-		uxSize = FreeRTOS_min_uint32( uxSize, pxClient->ulAmount );
+		if (pxClient->ullAmount < ( uint64_t ) uxSize )
+		{
+			uxSize = pxClient->ullAmount;
+		}
 		if( uxSize <= 0 )
 		{
 			break;
@@ -342,8 +350,8 @@ BaseType_t xResult = 0;
 		}
 		if( pxClient->bits.bTimed == pdFALSE_UNSIGNED )
 		{
-			pxClient->ulAmount -= uxSize;
-			if( pxClient->ulAmount == 0ul )
+			pxClient->ullAmount -= ( uint64_t ) uxSize;
+			if( pxClient->ullAmount == 0U )
 			{
 				/* All data have been sent. No longer interested in eSELECT_WRITE events. */
 				FreeRTOS_FD_CLR( pxClient->xServerSocket, xSocketSet, eSELECT_WRITE );
@@ -412,7 +420,7 @@ BaseType_t xRemaining = xRecvResult;
 				{
 					/* Transfer all properties to the data client. */
 					memcpy( &( pxDataClient->bits ), &( pxControlClient->bits ), sizeof( pxDataClient->bits ) );
-					pxDataClient->ulAmount = pxControlClient->ulAmount;
+					pxDataClient->ullAmount = pxControlClient->ullAmount;
 					pxDataClient->xRemainingTime = pxControlClient->xRemainingTime;
 					vTaskSetTimeOutState( &( pxDataClient->xTimeOut ) );
 
@@ -464,26 +472,27 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 					}
 					else if( strncmp( pcPtr, "\"num\"", 5 ) == 0 )
 					{
-					uint32_t ulAmount;
-						if( sscanf( pcPtr + 6, "%lu", &( ulAmount ) ) > 0 )
+						uint64_t ullAmount;
+						/* It is not certain that sscanf() can handle a 64-bit number. */
+						if( sscanf64( pcPtr + 6, &( ullAmount ) ) > 0 )
 						{
-							pxClient->ulAmount = ulAmount;
+							pxClient->ullAmount = ullAmount;
 						}
 					}
 					else if( strncmp( pcPtr, "\"time\"", 6 ) == 0 )
 					{
-					uint32_t ulSeconds;
-						if( sscanf( pcPtr + 7, "%lu", &( ulSeconds ) ) > 0 )
+						unsigned uSeconds;
+						if( sscanf( pcPtr + 7, "%u", &( uSeconds ) ) > 0 )
 						{
-							pxClient->xRemainingTime = ulSeconds * 1000ul;
+							pxClient->xRemainingTime = uSeconds * 1000U;
 							pxClient->bits.bTimed = pdTRUE_UNSIGNED;
 						}
 					}
 				}
 				if( pxClient->bits.bReverse != pdFALSE_UNSIGNED )
 				{
-					FreeRTOS_printf( ( "Reverse %d send %lu bytes timed %d: %lu\n",
-						pxClient->bits.bReverse, pxClient->ulAmount,
+					FreeRTOS_printf( ( "Reverse %d send %Lu bytes timed %d: %lu\n",
+						pxClient->bits.bReverse, pxClient->ullAmount,
 						pxClient->bits.bTimed,
 						pxClient->xRemainingTime ) );
 				}
@@ -601,7 +610,7 @@ BaseType_t xRecvResult;
 	/* Is this a data client with the -R reverse option ? */
 	if( ( pxClient->bits.bIsControl == pdFALSE_UNSIGNED ) && ( pxClient->bits.bReverse != pdFALSE_UNSIGNED ) )
 	{
-		if( ( pxClient->bits.bTimed == pdFALSE_UNSIGNED ) && ( pxClient->bits.bHasShutdown == pdFALSE_UNSIGNED ) && ( pxClient->ulAmount == (uint32_t)0u ) )
+		if( ( pxClient->bits.bTimed == pdFALSE_UNSIGNED ) && ( pxClient->bits.bHasShutdown == pdFALSE_UNSIGNED ) && ( pxClient->ullAmount == 0U ) )
 		{
 			FreeRTOS_printf( ( "Shutdown connection\n" ) );
 			FreeRTOS_shutdown( pxClient->xServerSocket, FREERTOS_SHUT_RDWR );
@@ -898,4 +907,22 @@ void vIPerfTask( void *pvParameter )
 		}
 #endif /* ipconfigIPERF_HAS_UDP */
 	}
+}
+
+int sscanf64( char *pcString, uint64_t * pullAmount )
+{
+	int retValue = 0;
+	char * pcSource = pcString;
+	uint64_t ullAmount = 0U;
+	if (isdigit (*pcSource)) {
+		retValue = 1;
+		do
+		{
+			ullAmount = 10U * ullAmount;
+			ullAmount += ( uint64_t ) ( *pcSource - '0' );
+			pcSource++;
+		} while (isdigit (*pcSource));
+	}
+	*pullAmount = ullAmount;
+	return retValue;
 }

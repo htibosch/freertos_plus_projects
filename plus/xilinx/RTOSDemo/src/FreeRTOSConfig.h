@@ -113,14 +113,14 @@
 #define configCPU_CLOCK_HZ						100000000UL
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	1
 #define configUSE_TICKLESS_IDLE					0
-#define configTICK_RATE_HZ						( ( TickType_t ) 1000 )
+#define configTICK_RATE_HZ						( 1000U )
 #define configPERIPHERAL_CLOCK_HZ  				( 33333000UL )
 #define configUSE_PREEMPTION					1
 #define configUSE_IDLE_HOOK						0
 #define configUSE_TICK_HOOK						0
 #define configMAX_PRIORITIES					( 10 )
 #define configMINIMAL_STACK_SIZE				( ( unsigned short ) 200 )
-#define configTOTAL_HEAP_SIZE					( 16 * 1024 * 1024 )
+#define configTOTAL_HEAP_SIZE					( 32 * 1024 * 1024 )
 #define configMAX_TASK_NAME_LEN					( 16 )
 #define configUSE_TRACE_FACILITY				1
 #define configUSE_16_BIT_TICKS					0
@@ -217,57 +217,6 @@ Zynq MPU. */
 
 /****** TCP demo settings. ****************************************************/
 
-/* Default MAC address configuration.  The demo creates a virtual network
-connection that uses this MAC address by accessing the raw Ethernet/WiFi data
-to and from a real network connection on the host PC.  See the
-configNETWORK_INTERFACE_TO_USE definition above for information on how to
-configure the real network connection to use. */
-
-
-#define configMAC_ADDR0		0x02
-#define configMAC_ADDR1		0x11
-#define configMAC_ADDR2		0x22
-#define configMAC_ADDR3		0x33
-#define configMAC_ADDR4		0x44
-#define configMAC_ADDR5		0x66
-
-/* Default IP address configuration.  Used in case ipconfigUSE_DHCP is set to 0, or
-ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
-#define configIP_ADDR0		192
-#define configIP_ADDR1		168
-#define configIP_ADDR2		2
-#define configIP_ADDR3		114
-
-/* Default gateway IP address configuration.  Used in ipconfigUSE_DHCP is set to
-0, or ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
-#define configGATEWAY_ADDR0	192
-#define configGATEWAY_ADDR1	168
-#define configGATEWAY_ADDR2	2
-#define configGATEWAY_ADDR3	5
-
-/* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and
-208.67.220.220.  Used in ipconfigUSE_DHCP is set to 0, or ipconfigUSE_DHCP is set
-to 1 but a DHCP server cannot be contacted.*/
-#define configDNS_SERVER_ADDR0 	192
-#define configDNS_SERVER_ADDR1 	168
-#define configDNS_SERVER_ADDR2 	1
-#define configDNS_SERVER_ADDR3 	1
-
-/* Default netmask configuration.  Used in ipconfigUSE_DHCP is set to 0, or
-ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
-#define configNET_MASK0		255
-#define configNET_MASK1		255
-#define configNET_MASK2		255
-#define configNET_MASK3		0
-
-/* The address of an echo server that will be used by the two demo echo client
-tasks.
-http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/examples_FreeRTOS_simulator.html */
-#define configECHO_SERVER_ADDR0	192
-#define configECHO_SERVER_ADDR1 168
-#define configECHO_SERVER_ADDR2 2
-#define configECHO_SERVER_ADDR3 3
-
 #ifndef	portINLINE
 	#define	portINLINE	__inline
 #endif
@@ -282,29 +231,60 @@ with \r\n.  If set to 0 then each message sent via the UDP logging facility will
 end with \n. */
 #define configUDP_LOGGING_NEEDS_CR_LF  ( 0 )
 
-/* Sets the maximum length for a string sent via the UDP logging facility. */
-#define configUDP_LOGGING_STRING_LENGTH	( 200 )
+/* Default MAC address configuration.  The demo creates a virtual network
+connection that uses this MAC address by accessing the raw Ethernet/WiFi data
+to and from a real network connection on the host PC.  See the
+configNETWORK_INTERFACE_TO_USE definition above for information on how to
+configure the real network connection to use. */
 
-/* The UDP logging facility buffers messages until the UDP logging task is able
-to transmit them.  configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER sets the maximum
-number of messages that can be buffered at any one time. */
-#define	configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER	( 200 )
 
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_STACK_SIZE sets the task's stack size. */
-#define	configUDP_LOGGING_TASK_STACK_SIZE  	( 512 )
+#define configMAC_ADDR0		0x00
+#define configMAC_ADDR1		0x11
+#define configMAC_ADDR2		0x22
+#define configMAC_ADDR3		0x33
+#define configMAC_ADDR4		0x44
+#define configMAC_ADDR5		0x57
 
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_PRIORITY sets the task's priority.  It is
-suggested to give the task a low priority to ensure it does not adversely effect
-the performance of other TCP/IP stack activity. */
-#define configUDP_LOGGING_TASK_PRIORITY   	( tskIDLE_PRIORITY  + 2 )
+/* Default IP address configuration.  Used in case ipconfigUSE_DHCP is set to 0, or
+ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
+#define configIP_ADDR0		192
+#define configIP_ADDR1		168
+#define configIP_ADDR2		2
+#define configIP_ADDR3		120
 
-/* The UDP port to which the UDP logging facility sends messages. */
-#define configUDP_LOGGING_PORT_REMOTE		2403
+/* Default gateway IP address configuration.  Used in case ipconfigUSE_DHCP is
+set to 0, or ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
+#define configGATEWAY_ADDR0	192
+#define configGATEWAY_ADDR1	168
+#define configGATEWAY_ADDR2	2
+#define configGATEWAY_ADDR3	1
 
-/* The local UDP port to which commands can be sent. */
-#define configUDP_LOGGING_PORT_LOCAL		2402
+/* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and
+208.67.220.220.  Used in ipconfigUSE_DHCP is set to 0, or ipconfigUSE_DHCP is set
+to 1 but a DHCP server cannot be contacted.*/
+#define configDNS_SERVER_ADDR0    118
+#define configDNS_SERVER_ADDR1    98
+#define configDNS_SERVER_ADDR2    44
+#define configDNS_SERVER_ADDR3    100
+
+/* Default netmask configuration.  Used in case ipconfigUSE_DHCP is set to 0,
+or ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
+#define configNET_MASK0		255
+#define configNET_MASK1		255
+#define configNET_MASK2		255
+#define configNET_MASK3		0
+
+/* The address of an echo server that will be used by the two demo echo client
+tasks.
+http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/examples_FreeRTOS_simulator.html */
+#define configECHO_SERVER_ADDR0	192
+#define configECHO_SERVER_ADDR1 168
+#define configECHO_SERVER_ADDR2 2
+#define configECHO_SERVER_ADDR3 3
+
+#ifndef __ASSEMBLY__
+	#define __ASSEMBLY__   0
+#endif
 
 #if( __ASSEMBLY__ == 0 )
 	typedef struct {

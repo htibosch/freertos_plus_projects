@@ -16,38 +16,51 @@
  *
  */
 
-#ifndef __PLUS_WEBSERVER_H__
-#define __PLUS_WEBSERVER_H__
+#ifndef __PLUS_ECHO_SERVER_H__
+    #define __PLUS_ECHO_SERVER_H__
 
-#define ECHO_BUFFER_LENGTH		7300
+    #ifdef __cplusplus
+        extern "C" {
+    #endif
 
-#define	ECHO_SERVER_PORT		32002
+    #define ECHO_BUFFER_LENGTH       7300
 
-#define CLIENT_SEND_COUNT			( 1024u * 1024u )
+    #define ECHO_SERVER_PORT         32002
 
-#define ECHO_SERVER_LOOPBACK_IP_ADDRESS	0x7f000001
+    #define CLIENT_SEND_COUNT        ( 1024u * 1024u )
+    #define CLIENT_SEND_COUNT_MAX    ( 0x7fffffff )
 
-#define PLUS_TEST_TX_BUFSIZE				2*1460	/* Units of bytes. */
-#define PLUS_TEST_TX_WINSIZE				1		/* Size in units of MSS */
-#define PLUS_TEST_RX_BUFSIZE				2*1460	/* Units of bytes. */
-#define PLUS_TEST_RX_WINSIZE				1		/* Size in units of MSS */
+/* Number of bytes to send per session, default CLIENT_SEND_COUNT */
+    extern size_t uxClientSendCount;
 
-//#define PLUS_TEST_TX_BUFSIZE				4*1460	/* Units of bytes. */
-//#define PLUS_TEST_TX_WINSIZE				2		/* Size in units of MSS */
-//#define PLUS_TEST_RX_BUFSIZE				4*1460	/* Units of bytes. */
-//#define PLUS_TEST_RX_WINSIZE				2		/* Size in units of MSS */
+    extern UBaseType_t uxServerAbort;
 
-extern uint32_t echoServerIPAddress( void );
+    #define ECHO_SERVER_LOOPBACK_IP_ADDRESS    0x7f000001
 
+    #define PLUS_TEST_TX_BUFSIZE               2 * 1460 /* Units of bytes. */
+    #define PLUS_TEST_TX_WINSIZE               1        /* Size in units of MSS */
+    #define PLUS_TEST_RX_BUFSIZE               2 * 1460 /* Units of bytes. */
+    #define PLUS_TEST_RX_WINSIZE               1        /* Size in units of MSS */
 
-extern char pcPlusBuffer[ ECHO_BUFFER_LENGTH ];
-extern int plus_test_active;
-extern int plus_test_two_way;
+/*#define PLUS_TEST_TX_BUFSIZE				4*1460	/ * Units of bytes. * / */
+/*#define PLUS_TEST_TX_WINSIZE				2		/ * Size in units of MSS * / */
+/*#define PLUS_TEST_RX_BUFSIZE				4*1460	/ * Units of bytes. * / */
+/*#define PLUS_TEST_RX_WINSIZE				2		/ * Size in units of MSS * / */
 
-void plus_echo_start(int aValue);
-
-void plus_echo_application_thread(void *parameters);
-void plus_echo_client_thread( void *parameters );
+    extern uint32_t echoServerIPAddress( void );
 
 
-#endif
+    extern char pcPlusBuffer[ ECHO_BUFFER_LENGTH ];
+    extern int plus_test_active;
+    extern int plus_test_two_way;
+
+    void plus_echo_start( int aValue );
+
+    void plus_echo_application_thread( void * parameters );
+    void plus_echo_client_thread( void * parameters );
+
+    #ifdef __cplusplus
+        } /* extern "C" */
+    #endif
+
+#endif /* ifndef __PLUS_ECHO_SERVER_H__ */

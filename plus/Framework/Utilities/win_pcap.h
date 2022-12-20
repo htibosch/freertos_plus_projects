@@ -45,7 +45,7 @@
         extern size_t pcap_has_space( SPcap * apThis );
 
 /* Write the buffer with Ethernet packets to a file. */
-        extern int pcap_toFile( SPcap * apThis,
+        extern int32_t pcap_toFile( SPcap * apThis,
                                 const char * pcFname );
 
 /* Free the space used by 'data'. */

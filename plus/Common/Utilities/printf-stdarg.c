@@ -86,17 +86,17 @@ typedef union
 
 struct xPrintFlags
 {
-    int base;                 /**< The number should be printed as either decimal (10), hexdecimal (16) or octal (8). */
-    int width;                /**< The total width of the thing to be printed, padded with a '0' or a space when needed. */
-    int printLimit;           /**< Total width of a number, will get leading zero's. */
+    int base;       /**< The number should be printed as either decimal (10), hexdecimal (16) or octal (8). */
+    int width;      /**< The total width of the thing to be printed, padded with a '0' or a space when needed. */
+    int printLimit; /**< Total width of a number, will get leading zero's. */
     unsigned
         letBase : 8,
-        pad_zero : 1,         /**< Use '0', not a space for padding. */
-        pad_right : 1,        /**< Padding: right adjusted. */
-        isSigned : 1,         /**< The number is signed. */
-        isNumber : 1,         /**< A numeric value is to be printed. */
-        long32 : 1,           /**< Not used as long is the same as unsigned. */
-        long64 : 1;           /**< The number is 64-bits. */
+        pad_zero : 1,  /**< Use '0', not a space for padding. */
+        pad_right : 1, /**< Padding: right adjusted. */
+        isSigned : 1,  /**< The number is signed. */
+        isNumber : 1,  /**< A numeric value is to be printed. */
+        long32 : 1,    /**< Not used as long is the same as unsigned. */
+        long64 : 1;    /**< The number is 64-bits. */
 };
 
 struct SStringBuf
@@ -135,7 +135,7 @@ static BaseType_t strbuf_printchar( struct SStringBuf * apStr,
 {
     if( apStr->str == NULL )
     {
-		/* There is no str pointer: printing to stdout. */
+        /* There is no str pointer: printing to stdout. */
         vOutputChar( ( char ) c, xTicksToWait );
         apStr->curLen++;
         return pdTRUE;
@@ -143,7 +143,7 @@ static BaseType_t strbuf_printchar( struct SStringBuf * apStr,
 
     if( apStr->str < apStr->nulPos )
     {
-		/* There is space for this character. */
+        /* There is space for this character. */
         *( apStr->str++ ) = c;
         apStr->curLen++;
         return pdTRUE;
@@ -151,7 +151,7 @@ static BaseType_t strbuf_printchar( struct SStringBuf * apStr,
 
     if( apStr->str == apStr->nulPos )
     {
-		/* nulPos is the last writeable character, zero it. */
+        /* nulPos is the last writeable character, zero it. */
         *( apStr->str++ ) = '\0';
     }
 
@@ -264,13 +264,13 @@ static BaseType_t prints( struct SStringBuf * apBuf,
     }
 
     if( ( apBuf->flags.isNumber == pdTRUE ) &&
-		( apBuf->flags.pad_zero == pdTRUE ) &&
-		( apBuf->flags.pad_right == pdFALSE ) )
+        ( apBuf->flags.pad_zero == pdTRUE ) &&
+        ( apBuf->flags.pad_right == pdFALSE ) )
     {
         /* The string to print represents an integer number.
          * In this case, printLimit is the min number of digits to print
          * If the length of the number to print is less than the minimal
-		 * number of digits to display, we add 0 before printing the number
+         * number of digits to display, we add 0 before printing the number
          */
         len = strlen( apString );
 
@@ -320,22 +320,24 @@ static BaseType_t prints( struct SStringBuf * apBuf,
  * In an earlier version, the signed lldiv() was used,
  * which led to corrupted output. */
 
-typedef struct xlldiv_t
-{
-	uint64_t quot;   // quotient
-	uint64_t rem;    // remainder
-}
-uns_lldiv_t;
+    typedef struct xlldiv_t
+    {
+        uint64_t quot; /* quotient */
+        uint64_t rem;  /* remainder */
+    }
+    uns_lldiv_t;
 
-static uns_lldiv_t uns_lldiv (uint64_t number, uint64_t denom)
-{
-	uns_lldiv_t rc;
-	// e.g. 10 / 4 = 2
-	rc.quot = number / denom;
-	// e.g. 10 - 2 x 4 = 2
-	rc.rem = number - rc.quot * denom;
-	return rc;
-}
+    static uns_lldiv_t uns_lldiv( uint64_t number,
+                                  uint64_t denom )
+    {
+        uns_lldiv_t rc;
+
+        /* e.g. 10 / 4 = 2 */
+        rc.quot = number / denom;
+        /* e.g. 10 - 2 x 4 = 2 */
+        rc.rem = number - rc.quot * denom;
+        return rc;
+    }
 
 /*  #warning 64-bit libraries will be included as well. */
     static BaseType_t printll( struct SStringBuf * apBuf,
@@ -344,28 +346,28 @@ static uns_lldiv_t uns_lldiv (uint64_t number, uint64_t denom)
         char print_buf[ 2 * PRINT_BUF_LEN ];
         register char * s;
         register unsigned t, neg;
-		register uint64_t u;
-		uns_lldiv_t lldiv_result;
+        register uint64_t u;
+        uns_lldiv_t lldiv_result;
 
         apBuf->flags.isNumber = pdTRUE; /* Parameter for prints */
 
-		if( i == 0 )
+        if( i == 0 )
         {
-			/* The number zero. */
+            /* The number zero. */
             print_buf[ 0 ] = '0';
             print_buf[ 1 ] = '\0';
             return prints( apBuf, print_buf );
         }
 
-		if( ( apBuf->flags.isSigned == pdTRUE ) && ( apBuf->flags.base == 10 ) && ( i < 0 ) )
+        if( ( apBuf->flags.isSigned == pdTRUE ) && ( apBuf->flags.base == 10 ) && ( i < 0 ) )
         {
             neg = 1;
-			u = ( uint64_t ) -i;
-		}
-		else
-		{
-			neg = 0;
-			u = ( uint64_t ) i;
+            u = ( uint64_t ) -i;
+        }
+        else
+        {
+            neg = 0;
+            u = ( uint64_t ) i;
         }
 
         /* Numbers are written from right to left. */
@@ -379,19 +381,19 @@ static uns_lldiv_t uns_lldiv (uint64_t number, uint64_t denom)
             lldiv_result = uns_lldiv( u, ( uint64_t ) apBuf->flags.base );
             t = lldiv_result.rem;
 
-			if( t < 10 )
+            if( t < 10 )
             {
-				/* '0' to '9' */
-				*( --s ) = t + '0';
-			}
-			else if( t < apBuf->flags.base )
-            {
-				/* 'A' to 'F' */
-				*( --s ) = t - 10 + apBuf->flags.letBase;
+                /* '0' to '9' */
+                *( --s ) = t + '0';
             }
-			else
-			{
-				/* Unexpected: the remainder is larger than the divisor. */
+            else if( t < apBuf->flags.base )
+            {
+                /* 'A' to 'F' */
+                *( --s ) = t - 10 + apBuf->flags.letBase;
+            }
+            else
+            {
+                /* Unexpected: the remainder is larger than the divisor. */
             }
 
             u = lldiv_result.quot;
@@ -518,26 +520,27 @@ static BaseType_t printi( struct SStringBuf * apBuf,
 /*-----------------------------------------------------------*/
 
 static BaseType_t printIpNr( struct SStringBuf * apBuf,
-                           unsigned i )
+                             unsigned i )
 {
-	apBuf->flags.printLimit = 3;
-	return printi( apBuf, i );
+    apBuf->flags.printLimit = 3;
+    return printi( apBuf, i );
 }
 
 static BaseType_t printIp( struct SStringBuf * apBuf,
                            unsigned uIPAddress )
 {
-	BaseType_t xResult = pdFALSE;
-	memset( &( apBuf->flags ), 0, sizeof apBuf->flags );
-	apBuf->flags.base = 10;
+    BaseType_t xResult = pdFALSE;
 
-	if( printIpNr( apBuf, uIPAddress >> 24 )            && strbuf_printchar( apBuf, '.' ) &&
-		printIpNr( apBuf, ( uIPAddress >> 16 ) & 0xff ) && strbuf_printchar( apBuf, '.' ) &&
-		printIpNr( apBuf, ( uIPAddress >> 8 ) & 0xff )  && strbuf_printchar( apBuf, '.' ) &&
-		printIpNr( apBuf, uIPAddress & 0xff ) )
-	{
-		xResult = pdTRUE;
-	}
+    memset( &( apBuf->flags ), 0, sizeof apBuf->flags );
+    apBuf->flags.base = 10;
+
+    if( printIpNr( apBuf, uIPAddress >> 24 ) && strbuf_printchar( apBuf, '.' ) &&
+        printIpNr( apBuf, ( uIPAddress >> 16 ) & 0xff ) && strbuf_printchar( apBuf, '.' ) &&
+        printIpNr( apBuf, ( uIPAddress >> 8 ) & 0xff ) && strbuf_printchar( apBuf, '.' ) &&
+        printIpNr( apBuf, uIPAddress & 0xff ) )
+    {
+        xResult = pdTRUE;
+    }
 
     return xResult;
 }
@@ -760,15 +763,25 @@ static void tiny_print( struct SStringBuf * apBuf,
         if( ch == 'l' )
         {
             ch = *( format++ );
-            apBuf->flags.long32 = 1;
-            /* Makes not difference as u32 == long */
+
+            if( ch != 'l' )
+            {
+                /* A format like "%lu". */
+                apBuf->flags.long32 = 1;
+            }
+            else
+            {
+                /* A format like "%llu". */
+                ch = *( format++ );
+                apBuf->flags.long64 = 1;
+            }
         }
 
         if( ch == 'L' )
         {
+            /* A format like "%Lu". */
             ch = *( format++ );
             apBuf->flags.long64 = 1;
-            /* Does make a difference */
         }
 
         apBuf->flags.base = 10;
@@ -925,7 +938,7 @@ const char * mkSize( uint64_t aSize,
                      char * apBuf,
                      int aLen )
 {
-	/* Must be static because it might be returned. */
+    /* Must be static because it might be returned. */
     static char retString[ 33 ];
     size_t gb, mb, kb, sb;
 
@@ -963,27 +976,39 @@ const char * mkSize( uint64_t aSize,
     return apBuf;
 }
 
-const char *mkTime (unsigned aTime, char *apBuf, int aLen)	/* Argument in uS */
+const char * mkTime( unsigned aTime,
+                     char * apBuf,
+                     int aLen )                             /* Argument in uS */
 {
-	/* Must be static because it might be returned. */
-	static char mySprintfRetString[33];
-	if (apBuf == NULL) {
-		apBuf = mySprintfRetString;
-		aLen = sizeof mySprintfRetString;
-	}
-	unsigned sec = aTime / (1000*1000);
-	aTime -= sec * (1000*1000);
-	unsigned ms = aTime / (1000);
-	aTime -= ms * (1000);
-	unsigned us = aTime;
-	if (sec) {
-		snprintf (apBuf, aLen, "%u.%02u S", ( unsigned ) sec, ( unsigned ) ( (100 * ms) / 1000 ) );
-	} else if (ms) {
-		snprintf (apBuf, aLen, "%u.%02u mS", ( unsigned ) ms, ( unsigned ) ( (100 * us) / 1000 ) );
-	} else {
-		snprintf (apBuf, aLen, "%u uS", ( unsigned ) us);
-	}
-	return apBuf;
+    /* Must be static because it might be returned. */
+    static char mySprintfRetString[ 33 ];
+
+    if( apBuf == NULL )
+    {
+        apBuf = mySprintfRetString;
+        aLen = sizeof mySprintfRetString;
+    }
+
+    unsigned sec = aTime / ( 1000 * 1000 );
+    aTime -= sec * ( 1000 * 1000 );
+    unsigned ms = aTime / ( 1000 );
+    aTime -= ms * ( 1000 );
+    unsigned us = aTime;
+
+    if( sec )
+    {
+        snprintf( apBuf, aLen, "%u.%02u S", ( unsigned ) sec, ( unsigned ) ( ( 100 * ms ) / 1000 ) );
+    }
+    else if( ms )
+    {
+        snprintf( apBuf, aLen, "%u.%02u mS", ( unsigned ) ms, ( unsigned ) ( ( 100 * us ) / 1000 ) );
+    }
+    else
+    {
+        snprintf( apBuf, aLen, "%u uS", ( unsigned ) us );
+    }
+
+    return apBuf;
 }
 
 #ifdef _MSC_VER

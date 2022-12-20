@@ -70,6 +70,7 @@ GPP=$(GCC_BIN)/$(GCC_PREFIX)-g++
 CC        = $(GCC_BIN)/$(GCC_PREFIX)-gcc
 CFLAGS    = $(DEBUG) $(OPTIMIZATION) $(C_EXTRA_FLAGS) $(DEFS) \
             $(AS_EXTRA_FLAGS)
+
 ASFILES   = $(C_SRCS:.c=.x) $(CPP_SRCS:.cpp=.x) $(S_SRCS:.S=.x)
 
 AS        = $(GCC_BIN)/$(GCC_PREFIX)-as
@@ -77,8 +78,6 @@ ASFLAGS   = $(DEBUG) \
             $(PLATFORM_INC_PATH:%=-Wa,-I%) $(INC_PATH:%=-Wa,-I%) $(AS_EXTRA_FLAGS)
 OBJFILES  = $(S_SRCS:.S=.o) $(C_SRCS:.c=.o) $(CPP_SRCS:.cpp=.o)
 
-LINT_TARGETS = $(LINT_C_FILES:.c=.lint)
-#LINT_INCLUDES=./includes.lnt
 
 STRINGS   = $(GCC_BIN)/$(GCC_PREFIX)-strings.exe
 
@@ -88,8 +87,6 @@ else
 LD        = $(CC)
 endif
 
-# LDFLAGS   = $(LIB_PATH:%=-L%) -Xlinker --gc-sections -Wl,-T -Wl,$(LINKER_SCRIPT) $(LD_EXTRA_FLAGS)
-# LDFLAGS   = $(LIB_PATH:%=-L%) -Xlinker --gc-sections -T $(LINKER_SCRIPT) $(LD_EXTRA_FLAGS)
 LDFLAGS   = $(LIB_PATH:%=-L%) $(LINKER_SCRIPT:%=-T %) $(LD_EXTRA_FLAGS)
 
 #LDLIBS    = $(LIBS:%=-l%)
@@ -125,7 +122,7 @@ DOCGEN    = doxygen
 ERR_TARGET_TYPE       = Target type not supported: `$(TGTTYPE)'
 MSG_CLEANING          = Cleaning project.
 MSG_PREPROCESSING     = Preprocessing \`$<\' to \`$@\'.
-MSG_COMPILING         = Compiling \`$<\' to \`$@\'.
+MSG_COMPILING         = Compiling \`$<\'
 MSG_ASSEMBLING        = Assembling \`$<\' to \`$@\'.
 MSG_ARCHIVING         = Archiving to \`$@\'.
 MSG_LINKING           = Linking to \`$@\'.
@@ -148,7 +145,7 @@ MSG_CLEANING_DOC      = Cleaning documentation.
 MSG_GENERATING_DOC    = Generating documentation to \`$(DOC_PATH)\'.
 
 ECHO_CMD="echo"
-TOUCH_CMD="touch"
+TOUCH_CMD="touch.exe"
 
 # ** ** ** *** ** ** ** ** ** ** ** ** ** ** **
 # MAKE RULES
@@ -164,7 +161,7 @@ all: ccversion a lss sym sizes
 else
 ifeq ($(TGTTYPE),.elf)
 .PHONY: all
-all: ccversion elf lintfiles lss sym hex bin sizes
+all: ccversion elf lss sym hex bin sizes
 else
 $(error $(ERR_TARGET_TYPE))
 endif
@@ -180,7 +177,6 @@ clean:
 	-$(VERBOSE_CMD)$(RM) $(LSS)
 	-$(VERBOSE_CMD)$(RM) $(TGTFILE)
 	-$(VERBOSE_CMD)$(RM) $(OBJFILES)
-	-$(VERBOSE_CMD)$(RM) $(LINT_TARGETS)
 	-$(VERBOSE_CMD)$(RM) $(ASFILES)
 	-$(VERBOSE_CMD)$(RM) $(CPPFILES)
 	-$(VERBOSE_CMD)$(RM) $(DPNDFILES)
@@ -206,9 +202,6 @@ asfiles: $(ASFILES)
 # Generate object files from C and assembler source files.
 .PHONY: objfiles
 objfiles: $(OBJFILES)
-
-.PHONY: lintfiles
-lintfiles: $(LINT_INCLUDES) $(LINT_TARGETS)
 
 ifeq ($(TGTTYPE),.a)
 # Archive: create A output file from object files.
@@ -582,21 +575,6 @@ endif
 	@$(TOUCH_CMD) $*.d
 	@$(TOUCH_CMD) $@
 	$(VERBOSE_NL)
-
-$(LINT_INCLUDES): Makefile $(MAKECFG)
-	@echo Making $(LINT_INCLUDES)
-	@echo $(INC_PATH) | sed "s/^/--i/;s/ /\n--i/g" > $(LINT_INCLUDES)
-
-#	Compiling `../../../../lib/FreeRTOS-Plus-TCP-multi/source/FreeRTOS_Routing.c' to `../../../../lib/FreeRTOS-Plus-TCP-multi/source/FreeRTOS_Routing.lint'.
-#	 - ../../../../lib/FreeRTOS-Plus-TCP-multi/source/FreeRTOS_Routing.c
-LINT=C:/PROGRA~2/PC-LIN~1.0/lint-nt.exe
-%.lint: %.c %.d
-	@$(ECHO_CMD) $(MSG_COMPILING)
-	$(VERBOSE_CMD)$(LINT) --iC:/PROGRA~2/PC-LIN~1.0/dan std.lnt $(LINT_INCLUDES) $<
-	@$(TOUCH_CMD) $@
-	$(VERBOSE_NL)
-
-#	$(VERBOSE_CMD)$(LINT) --iC:/PROGRA~2/PC-LIN~1.0/freertos std.lnt $(LINT_INCLUDES) $<
 
 # ==========================================================================
 # Assembler - source

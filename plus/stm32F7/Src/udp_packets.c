@@ -852,16 +852,20 @@ const struct SPacket xPackets[] = {
 
 /* Returned to indicate a valid checksum when the checksum does not need to be
 calculated. */
-#define ipCORRECT_CRC				0xffffu
+#ifndef ipCORRECT_CRC
+	#define ipCORRECT_CRC				0xffffu
+#endif
 
 /* Returned as the (invalid) checksum when the length of the data being checked
 had an invalid length. */
-#define ipINVALID_LENGTH			0x1234u
+#ifndef ipINVALID_LENGTH
+	#define ipINVALID_LENGTH			0x1234u
+#endif
 
 
 /* uint16_t usGenerateProtocolChecksum( const uint8_t * const pucEthernetBuffer, BaseType_t xOutgoingPacket ); */
-uint16_t usGenerateProtocolChecksum( const uint8_t * const pucEthernetBuffer, size_t uxBufferLength, BaseType_t xOutgoingPacket );
-uint16_t usGenerateChecksum( uint16_t usSum, const uint8_t * pucNextData, size_t uxDataLengthBytes );
+uint16_t usGenerateProtocolChecksum( uint8_t * const pucEthernetBuffer, size_t uxBufferLength, BaseType_t xOutgoingPacket );
+uint16_t usGenerateChecksum( uint16_t usSum, const uint8_t * pucNextData, size_t uxByteCount );
 
 uint8_t ucRAMBuffer[2 + 1500] __attribute__ ((aligned (4)));
 

@@ -114,6 +114,13 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
 
+  .first :
+  {
+    . = ALIGN(8);
+    *(.first_data .first_data.*)     /* .first_data sections */
+    . = ALIGN(8);
+  } >RAM
+
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
 
@@ -122,7 +129,6 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
-    *(.first_data)     /* .first_data sections */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 

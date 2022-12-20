@@ -51,7 +51,7 @@ TGTNAME   = $(prefix $(TARGET))
 TGTFILE   = $(TARGET)
 
 
-RM        = /bin/rm -rf
+RM        = rm -Rf
 
 AR        = $(GCC_BIN)/$(GCC_PREFIX)-ar
 ARFLAGS   = rcs
@@ -72,13 +72,14 @@ CPPFILES  = $(CPP_SRCS:.cpp=.i) $(C_SRCS:.c=.i)
 GPP=$(GCC_BIN)/$(GCC_PREFIX)-g++
 
 CC        = $(GCC_BIN)/$(GCC_PREFIX)-gcc
-CFLAGS    = $(DEBUG) $(OPTIMIZATION) $(C_EXTRA_FLAGS) $(DEFS) \
+CFLAGS    = $(WARNINGS) $(DEBUG) $(OPTIMIZATION) $(C_EXTRA_FLAGS) $(DEFS) \
             $(AS_EXTRA_FLAGS)
 ASFILES   = $(C_SRCS:.c=.x) $(CPP_SRCS:.cpp=.x) $(S_SRCS:.S=.x)
 
 AS        = $(GCC_BIN)/$(GCC_PREFIX)-as
 ASFLAGS   = $(DEBUG) \
-            $(PLATFORM_INC_PATH:%=-Wa,-I%) $(INC_PATH:%=-Wa,-I%) $(AS_EXTRA_FLAGS)
+            $(AS_EXTRA_FLAGS)
+
 OBJFILES  = $(S_SRCS:.S=.o) $(C_SRCS:.c=.o) $(CPP_SRCS:.cpp=.o)
 
 
@@ -149,8 +150,8 @@ MSG_READING_CPU_REGS  = Reading CPU registers.
 MSG_CLEANING_DOC      = Cleaning documentation.
 MSG_GENERATING_DOC    = Generating documentation to \`$(DOC_PATH)\'.
 
-ECHO_CMD=/bin/echo
-TOUCH_CMD=/usr/bin/touch
+ECHO_CMD=echo
+TOUCH_CMD=touch.exe
 
 # ** ** ** *** ** ** ** ** ** ** ** ** ** ** **
 # MAKE RULES
@@ -201,6 +202,7 @@ ccversion: $(EARLY_TARGETS)
 	echo "$(PRJ_PATH)"
 	echo "$(CUR_PATH)"
 	$(CC) --version
+	make --version
 
 # Generate preprocessed files from C source files.
 .PHONY: cppfiles

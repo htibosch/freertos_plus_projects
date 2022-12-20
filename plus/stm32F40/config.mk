@@ -2,28 +2,23 @@
 #	config.mk for 'stm32F40.elf' for STM32F4xx
 #
 
-#C:\Ac6\SystemWorkbench\plugins\fr.ac6.mcu.externaltools.arm-none.win32_1.7.0.201602121829\tools\compiler\bin
+ipconfigMULTI_INTERFACE=true
+ipconfigUSE_IPv6=true
 
-#GCC_BIN=C:/Ac6/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.7.0.201602121829/tools/compiler/bin
-#GCC_BIN=C:/Ac6_v2.8/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin
-#GCC_BIN=C:/Ac6/7.2.1-1.1-20180401-0515/bin
+GCC_BIN=C:/Ac6_v2.9/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin
 GCC_PREFIX=arm-none-eabi
-
-#GCC_BIN=/usr/bin
-GCC_BIN=$(HOME)/Ac6/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.17.0.201812190825/tools/compiler/bin
-
 
 C_SRCS =
 S_SRCS =
+
+check_exist = $(if $(wildcard $1),,$(MKDIR) $1)
 
 # Four choices for network and FAT driver:
 
 USE_FREERTOS_PLUS=true
 
-ipconfigMULTI_INTERFACE=false
-ipconfigUSE_IPv6=false
-
-HAS_TCP_TESTER=true
+TCP_SOURCE=
+#TCP_SOURCE=/Source
 
 ipconfigUSE_TCP_MEM_STATS=false
 
@@ -31,10 +26,20 @@ ipconfigTCP_IP_SANITY=false
 
 USE_LINT=false
 
+USE_TCP_DEMO_CLI=true
+
+USE_NTP_DEMO=true
+
 # ChaN's FS versus +FAT
 USE_PLUS_FAT=false
 
-HAS_ECHO_TEST=false
+# both a client and a server for simple TCP echo.
+HAS_ECHO_TEST=true
+
+# A http client for testing.
+USE_ECHO_TASK=true
+
+USE_NTOP_TEST=false
 
 USE_IPERF=true
 
@@ -47,24 +52,27 @@ USE_STM324xG_EVAL=false
 
 USE_LOG_EVENT=false
 
-USE_ECHO_TASK=true
 
 HAS_SDRAM_TEST=false
 
 USE_TELNET=true
 
+USE_SIMPLE_TCP_SERVER=false
+
+
 # The word 'fireworks' here can be replaced by any other string
 # Others would write 'foo'
-ROOT_PATH = $(subst /fireworks,,$(abspath ../../fireworks))
-PRJ_PATH = $(subst /fireworks,,$(abspath ../fireworks))
-CUR_PATH = $(subst /fireworks,,$(abspath ./fireworks))
+PRJ_PATH = $(subst /fireworks,,$(abspath ./fireworks))
+ROOT_PATH = $(subst /fireworks,,$(abspath ../fireworks))
+CUR_PATH = $(PRJ_PATH)/Src
 
-HOME_PATH = $(subst /fireworks,,$(abspath ../../../fireworks))
-#AMAZON_ROOT = $(HOME_PATH)/amazon-freertos/amazon-freertos
-AMAZON_ROOT = $(HOME_PATH)/amazon-freertos/amazon-freertos.dns_cache_size
+HOME_PATH = $(subst /fireworks,,$(abspath ../../fireworks))
 
 # The path where this Makefile is located:
 DEMO_PATH = $(PRJ_PATH)/Src
+
+# E:\Home\amazon-freertos\freertos_plus_projects\plus\stm32F40\config.mk
+# E:\Home\amazon-freertos\freertos_plus_projects\plus\Framework
 
 HAL_PATH = $(PRJ_PATH)/Drivers/STM32F4xx_HAL_Driver
 #HAL_PATH = $(PRJ_PATH)/Drivers/STM32F4xx_HAL_Driver_1.24.0
@@ -84,7 +92,10 @@ DEFS += -DSTM32F4xx=1
 LD_EXTRA_FLAGS =
 
 FREERTOS_ROOT = \
-	$(ROOT_PATH)/Framework/FreeRTOS_v9.0.0
+	$(ROOT_PATH)/framework/FreeRTOS_v10.0.0
+
+FREERTOS_PORT_PATH = \
+	$(FREERTOS_ROOT)/portable/GCC/ARM_CM4F
 
 DEMOS_ROOT = \
 	$(ROOT_PATH)/Common
@@ -92,30 +103,31 @@ DEMOS_ROOT = \
 FREERTOS_PATH = \
 	$(FREERTOS_ROOT)
 
+AMAZON_PATH = $(subst /fireworks,,$(abspath ../../../fireworks))
+
 ifeq ($(ipconfigMULTI_INTERFACE),true)
 	DEFS += -DipconfigMULTI_INTERFACE=1
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-multi
-	LINT_INCLUDES=./includes_multi.lnt
+		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-multi.v2.3.1
 else
 	DEFS += -DipconfigMULTI_INTERFACE=0
 	ipconfigUSE_IPv6=false
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP
-	LINT_INCLUDES=./includes_single.lnt
+		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP.v2.3.4
 endif
 
-INC_RTOS = \
-	$(PRJ_PATH)/Inc/ \
-	$(HAL_PATH)/Inc/ \
-	$(HAL_PATH)/Inc/Legacy/ \
-	$(CMSIS_PATH)/Include/ \
-	$(CMSIS_PATH)/Device/ST/STM32F4xx/Include/ \
-	$(FREERTOS_ROOT)/portable/GCC/ARM_CM4F/ \
-	$(FREERTOS_ROOT)/include/ \
-	$(FREERTOS_ROOT)/CMSIS_RTOS/ \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/ \
-	$(ROOT_PATH)/framework/MySource/
+# Check for \Home\amazon-freertos\ipv6\FreeRTOS-Plus-TCP\source\FreeRTOS_IP_Timers.c
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/source/FreeRTOS_TCP_Reception.c))
+    # Old style with big source files
+    TCP_SHORT_SOURCE_FILES=false
+else
+    # New style with smaller source files
+    TCP_SHORT_SOURCE_FILES=true
+	TCP_SOURCE=/source
+endif
+
+TCP_UTILITIES=$(PLUS_TCP_PATH)/tools/tcp_utilities
 
 PLUS_FAT_PATH = \
 	$(ROOT_PATH)/Framework/FreeRTOS-Plus-FAT
@@ -131,25 +143,33 @@ else
 	DEFS += -DipconfigUSE_IPv6=0
 endif
 
-
 ifeq ($(ipconfigTCP_IP_SANITY),true)
 	DEFS += -DipconfigTCP_IP_SANITY=1
 endif
 
 PROTOCOLS_PATH = \
-	$(PLUS_TCP_PATH)/source/protocols
+	$(PLUS_TCP_PATH)/Protocols
 
 #PLUS_TCP_PATH = \
 #	$(PRJ_PATH)/Middlewares/Third_Party/FreeRTOS-Plus-TCP
 
+# E:\Home\plus\Framework\FreeRTOS-Plus-TCP\source\portable\Compiler\GCC
+
 INC_PATH = \
-	$(INC_RTOS) \
-	$(CUR_PATH)/ \
+	$(PRJ_PATH)/ \
+	$(PRJ_PATH)/Inc/ \
+	$(PRJ_PATH)/Src/ \
+	$(HAL_PATH)/Inc/ \
+	$(HAL_PATH)/Inc/Legacy/ \
+	$(CMSIS_PATH)/Include/ \
+	$(CMSIS_PATH)/Device/ST/STM32F4xx/Include/ \
+	$(FREERTOS_PORT_PATH)/ \
+	$(FREERTOS_ROOT)/include/ \
+	$(FREERTOS_ROOT)/CMSIS_RTOS/ \
+	$(TCP_UTILITIES)/include/ \
+	$(ROOT_PATH)/framework/MySource/ \
 	$(FREERTOS_PATH)/portable/GCC/ARM_CM4F/ \
-	$(PLUS_TCP_PATH)/include/ \
-	$(PLUS_TCP_PATH)/source/portable/Compiler/GCC/ \
-	$(PLUS_TCP_PATH)/source/protocols/include/ \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/include/ \
+	$(PROTOCOLS_PATH)/include/ \
 	$(CUR_PATH)/Third_Party/USB/ \
 	$(ROOT_PATH)/Utilities/include/ \
 	$(ROOT_PATH)/Framework/Utilities/include/ \
@@ -157,29 +177,46 @@ INC_PATH = \
 	$(ROOT_PATH)/Common/Utilities/include/ \
 	$(ROOT_PATH)/Common/Utilities/
 
+ifeq ($(TCP_SHORT_SOURCE_FILES),true)
+    # New style with smaller source files
+	# /source/<sources>
+	# /source/include
+	# /source/portable
+INC_PATH += \
+	$(PLUS_TCP_PATH)/source/include/ \
+	$(PLUS_TCP_PATH)/source/portable/Compiler/GCC/ \
+	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/include/ \
+	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/ \
+	$(PLUS_TCP_PATH)/tools/tcp_utilities/include/
+else
+    # Old style with big source files
+INC_PATH += \
+	$(PLUS_TCP_PATH)/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/Compiler/GCC/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/ \
+	$(PLUS_TCP_PATH)/tools/tcp_utilities/include/
+endif
+
 S_SRCS += \
 	$(CMSIS_PATH)/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f407xx.S
+
+DEFS += -DSPRINTF_LONG_LONG=1
 
 C_SRCS += \
 	$(CUR_PATH)/main.c \
 	$(CUR_PATH)/memcpy.c \
 	$(CUR_PATH)/stm32f4xx_it.c \
-	$(ROOT_PATH)/Common/Utilities/printf-stdarg.c \
 	$(CUR_PATH)/hr_gettime.c \
+	$(CUR_PATH)/snmp_tests.c \
 	$(CMSIS_PATH)/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c
+
+#	E:/temp/tcp_testing/SimpleTCPEchoServer.c
 
 ifeq ($(HAS_SDRAM_TEST),true)
 	C_SRCS += \
 		$(CUR_PATH)/sdram_test.c
 	DEFS += -DHAS_SDRAM_TEST=1
-endif
-
-ifeq ($(USE_ECHO_TASK),true)
-	C_SRCS += \
-		$(CUR_PATH)/echo_client.c
-	DEFS += -DUSE_ECHO_TASK=1
-else
-	DEFS += -DUSE_ECHO_TASK=0
 endif
 
 #	$(CMSIS_PATH)/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx_non_cube
@@ -192,7 +229,7 @@ C_SRCS += \
 	$(FREERTOS_PATH)/tasks.c \
 	$(FREERTOS_PATH)/timers.c \
 	$(FREERTOS_PATH)/portable/MemMang/heap_5.c \
-	$(FREERTOS_PATH)/portable/GCC/ARM_CM4F/port.c
+	$(FREERTOS_PORT_PATH)/port.c
 
 ifeq ($(USE_PLUS_FAT),true)
 	DEFS += -DUSE_PLUS_FAT=1
@@ -217,12 +254,12 @@ ifeq ($(USE_PLUS_FAT),true)
 		$(PLUS_FAT_PATH)/ff_string.c \
 		$(PLUS_FAT_PATH)/ff_locking.c \
 		$(PLUS_FAT_PATH)/ff_time.c \
+		$(PLUS_FAT_PATH)/ff_stdio.c \
+		$(PLUS_FAT_PATH)/ff_sys.c \
 		$(PLUS_FAT_PATH)/portable/common/ff_ramdisk.c \
 		$(PLUS_FAT_PATH)/portable/STM32F4xx/ff_sddisk.c \
 		$(PLUS_FAT_PATH)/portable/STM32F4xx/stm32f4xx_hal_sd.c \
 		$(PLUS_FAT_PATH)/portable/STM32F4xx/stm32f4xx_ll_sdmmc.c \
-		$(PLUS_FAT_PATH)/ff_stdio.c \
-		$(PLUS_FAT_PATH)/ff_sys.c \
 		$(DEMOS_ROOT)/FreeRTOS_Plus_FAT_Demos/CreateAndVerifyExampleFiles.c \
 		$(DEMOS_ROOT)/FreeRTOS_Plus_FAT_Demos/test/ff_stdio_tests_with_cwd.c
 
@@ -241,8 +278,17 @@ ifeq ($(ipconfigUSE_HTTP),true)
 		$(PROTOCOLS_PATH)/HTTP/FreeRTOS_HTTP_server.c \
 		$(PROTOCOLS_PATH)/HTTP/FreeRTOS_HTTP_commands.c \
 		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_server.c \
-		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_commands.c \
+		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_commands.c
+endif
+
+C_SRCS += \
+	$(ROOT_PATH)/Framework/Utilities/tcp_connect_demo.c
+
+ifeq ($(USE_NTP_DEMO),true)
+	C_SRCS += \
 		$(PROTOCOLS_PATH)/NTP/NTPDemo.c
+	DEFS += -DUSE_NTP_DEMO=1
+	DEFS += -DipconfigUSE_NTP_DEMO
 endif
 
 ifeq ($(USE_STM324xG_EVAL),true)
@@ -268,21 +314,54 @@ endif
 
 ifeq ($(USE_LOG_EVENT),true)
 	DEFS += -DUSE_LOG_EVENT=1
-	DEFS += -DLOG_EVENT_NAME_LEN=24
-	DEFS += -DLOG_EVENT_COUNT=128
-	DEFS += -DEVENT_MAY_WRAP=0
+	DEFS += -DLOG_EVENT_COUNT=50
+	DEFS += -DLOG_EVENT_NAME_LEN=50
+	DEFS += -DSTATIC_LOG_MEMORY=1
+	DEFS += -DEVENT_MAY_WRAP=1
 	C_SRCS += \
 		$(ROOT_PATH)/Framework/Utilities/eventLogging.c
 else
 	DEFS += -D USE_LOG_EVENT=0
 endif
 
+#	$(PRJ_PATH)/../plus/Framework/Utilities/mySprintf.c
+ifeq ($(TCP_SHORT_SOURCE_FILES),true)
+	C_SRCS += \
+		$(wildcard $(PLUS_TCP_PATH)/source/*.c)
+
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/source/portable/BufferManagement/BufferAllocation_1.c \
+		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
+		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c
+
+else
+	C_SRCS += \
+		$(wildcard $(PLUS_TCP_PATH)/*.c)
+	C_SRCS += \
+		$(wildcard $(PLUS_TCP_PATH)/source/*.c)
+
+	C_SRCS += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/BufferManagement/BufferAllocation_1.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c
+endif
+
 ifeq ($(USE_TELNET),true)
 	DEFS += -DUSE_TELNET=1
+	DEFS += -DTELNET_USES_REUSE_SOCKETS=0
 	C_SRCS += \
-		$(ROOT_PATH)/Common/Utilities/telnet.c
+		$(ROOT_PATH)/Common/Utilities/telnet.c \
+		$(ROOT_PATH)/Common/Utilities/telnet_usage.c
 else
 	DEFS += -D USE_TELNET=0
+endif
+
+ifeq ($(USE_SIMPLE_TCP_SERVER),true)
+	DEFS += -DUSE_SIMPLE_TCP_SERVER=1
+	C_SRCS += \
+		$(CUR_PATH)/SimpleTCPEchoServer.c
+else
+	DEFS += -D USE_SIMPLE_TCP_SERVER=0
 endif
 
 DEFS += -DLOGBUF_MAX_UNITS=100
@@ -291,25 +370,34 @@ DEFS += -DLOGBUF_AVG_LEN=72
 #	$(PRJ_PATH)/Framework/Utilities/mySprintf.c
 
 
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_TCP_IP_Reception.c))
+    # old sources, has not network interface example
+else
 C_SRCS += \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_ARP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_DHCP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_DNS.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_IP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_Sockets.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_Stream_Buffer.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_IP.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_WIN.c \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_UDP_IP.c \
-	$(PLUS_TCP_PATH)/source/portable/BufferManagement/BufferAllocation_2.c \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/NetworkInterface.c \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/Common/NetworkinterfaceExample.c
+endif
+
+
+ifeq ($(USE_NTOP_TEST),true)
+	DEFS += -DUSE_NTOP_TEST=1
+	C_SRCS += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/test/inet_pton_ntop_tests.c
+	INC_PATH += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/test
+endif
 
 ifeq ($(ipconfigUSE_TCP_MEM_STATS),true)
 	DEFS += -DipconfigUSE_TCP_MEM_STATS=1
 	C_SRCS += \
 		$(PLUS_TCP_PATH)/tools/tcp_mem_stats.c
 endif
+
+C_SRCS += \
+	$(TCP_UTILITIES)/tcp_netstat.c \
+	$(TCP_UTILITIES)/ddos_testing.c
+
+DEFS += -DUSE_UDP_CALLNACK=1
 
 ifeq ($(HAS_ECHO_TEST),true)
 	DEFS += -DHAS_ECHO_TEST=1
@@ -318,57 +406,36 @@ ifeq ($(HAS_ECHO_TEST),true)
 		$(ROOT_PATH)/Common/Utilities/plus_echo_server.c
 endif
 
-ifeq ($(HAS_TCP_TESTER),true)
-	DEFS += -DHAS_TCP_TESTER=1
+ifeq ($(USE_ECHO_TASK),true)
 	C_SRCS += \
-			$(CUR_PATH)/tcp_tester.c
-endif
-
-LINT_C_FILES=
-
-ifeq ($(USE_LINT),true)
-	LINT_C_FILES=\
-		$(PLUS_TCP_PATH)/source/FreeRTOS_Stream_Buffer.c
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_Sockets.c       \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_WIN.c       \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_DHCP.c          \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS.c           \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_ARP.c           \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_IP.c            \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_UDP_IP.c        \
-#		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_IP.c
-	ifeq ($(ipconfigMULTI_INTERFACE),true)
-		LINT_C_FILES+=\
-			$(PLUS_TCP_PATH)/source/FreeRTOS_Routing.c
-		ifeq ($(ipconfigUSE_IPv6),true)
-			LINT_C_FILES+=\
-				$(PLUS_TCP_PATH)/source/FreeRTOS_ND.c
-		endif
+		$(TCP_UTILITIES)/http_client_test.c
+	DEFS += -DUSE_ECHO_TASK=1
 	else
-	endif
-#	$(PLUS_TCP_PATH)/source/portable/Buffermanagement/BufferAllocation_2.c
-#	$(PLUS_TCP_PATH)/source/portable/Buffermanagement/BufferAllocation_1.c
-#	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/NetworkInterface.c
-#	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/STM32Fxx/stm32fxx_hal_eth.c
+	DEFS += -DUSE_ECHO_TASK=0
 endif
 
-C_SRCS += \
-	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Common/phyHandling.c
 
-ifeq ($(ipconfigMULTI_INTERFACE),true)
+ifeq ($(USE_TCP_MEM_STATS),true)
 	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_Routing.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/loopback/NetworkInterface.c
+		$(TCP_UTILITIES)/tcp_mem_stats.c
+	DEFS += -DipconfigUSE_TCP_MEM_STATS
 endif
 
-ifeq ($(ipconfigUSE_IPv6),true)
 	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_ND.c
-endif
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/Common/phyHandling.c
 
 C_SRCS += \
 	$(ROOT_PATH)/Common/Utilities/UDPLoggingPrintf.c \
-	$(ROOT_PATH)/Common/Utilities/date_and_time.c
+	$(ROOT_PATH)/Common/Utilities/printf-stdarg.c \
+	$(TCP_UTILITIES)/date_and_time.c
+
+ifeq ($(USE_TCP_DEMO_CLI),true)
+	DEFS += -DUSE_TCP_DEMO_CLI=1
+	C_SRCS += \
+		$(TCP_UTILITIES)/plus_tcp_demo_cli.c
+else
+	DEFS += -DUSE_TCP_DEMO_CLI=0
+endif
 
 C_SRCS += \
 	$(HAL_PATH)/Src/stm32f4xx_hal.c \
@@ -420,7 +487,7 @@ LINKER_SCRIPT=stm32F40.ld
 ifeq ($(SMALL_SIZE),true)
 	DEFS += -D ipconfigHAS_PRINTF=0
 	DEFS += -D ipconfigHAS_DEBUG_PRINTF=0
-	OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
+	OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
 else
 #	OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
 	OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
@@ -428,7 +495,7 @@ endif
 
 TARGET = $(CUR_PATH)/stm32F40.elf
 
-WARNINGS = -Wall -Wextra -Warray-bounds
+WARNINGS = -Wall -Wextra -Warray-bounds -Werror=implicit-function-declaration
 #-Wundef
 
 DEBUG = -g3

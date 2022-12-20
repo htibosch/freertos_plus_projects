@@ -301,7 +301,7 @@ verboseLevel = 0;
 	}
 
 	/* Create a sub directory. */
-	iReturn = ff_mkdir( pcDirectory1 );
+	iReturn = ff_mkdir( pcDirectory1, pdTRUE );
 	configASSERT( iReturn == pdFREERTOS_ERRNO_NONE );
 
 	/* Move into the created sub-directory. */
@@ -315,7 +315,7 @@ verboseLevel = 0;
 		FF_PRINTF( "In directory %s\n", pcRAMBuffer );
 	}
 	/* Create a subdirectory in the new directory. */
-	iReturn = ff_mkdir( pcDirectory2 );
+	iReturn = ff_mkdir( pcDirectory2, pdTRUE );
 	configASSERT( iReturn == pdFREERTOS_ERRNO_NONE );
 
 	/* Move into the directory just created - now two directories down from
@@ -455,7 +455,7 @@ char *pcRAMBuffer, *pcFileName;
 	FF_FILE *pxFile;
 
 		/* Create the directory used as the root of the HTTP server. */
-		iReturned = ff_mkdir( configHTTP_ROOT );
+		iReturned = ff_mkdir( configHTTP_ROOT, pdTRUE );
 
 		if( iReturned == pdFREERTOS_ERRNO_NONE )
 		{

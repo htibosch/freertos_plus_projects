@@ -1,79 +1,32 @@
 /*
-    FreeRTOS V8.2.1 - Copyright (C) 2015 Real Time Engineers Ltd.
-    All rights reserved
-
-    VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
-
-    This file is part of the FreeRTOS distribution.
-
-    FreeRTOS is free software; you can redistribute it and/or modify it under
-    the terms of the GNU General Public License (version 2) as published by the
-    Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
-
-    ***************************************************************************
-    >>!   NOTE: The modification to the GPL is included to allow you to     !<<
-    >>!   distribute a combined work that includes FreeRTOS without being   !<<
-    >>!   obliged to provide the source code for proprietary components     !<<
-    >>!   outside of the FreeRTOS kernel.                                   !<<
-    ***************************************************************************
-
-    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
-    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-    FOR A PARTICULAR PURPOSE.  Full license text is available on the following
-    link: http://www.freertos.org/a00114.html
-
-    ***************************************************************************
-     *                                                                       *
-     *    FreeRTOS provides completely free yet professionally developed,    *
-     *    robust, strictly quality controlled, supported, and cross          *
-     *    platform software that is more than just the market leader, it     *
-     *    is the industry's de facto standard.                               *
-     *                                                                       *
-     *    Help yourself get started quickly while simultaneously helping     *
-     *    to support the FreeRTOS project by purchasing a FreeRTOS           *
-     *    tutorial book, reference manual, or both:                          *
-     *    http://www.FreeRTOS.org/Documentation                              *
-     *                                                                       *
-    ***************************************************************************
-
-    http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-    the FAQ page "My application does not run, what could be wrong?".  Have you
-    defined configASSERT()?
-
-    http://www.FreeRTOS.org/support - In return for receiving this top quality
-    embedded software for free we request you assist our global community by
-    participating in the support forum.
-
-    http://www.FreeRTOS.org/training - Investing in training allows your team to
-    be as productive as possible as early as possible.  Now you can receive
-    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-    Ltd, and the world's leading authority on the world's leading RTOS.
-
-    http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
-    including FreeRTOS+Trace - an indispensable productivity tool, a DOS
-    compatible FAT file system, and our tiny thread aware UDP/IP stack.
-
-    http://www.FreeRTOS.org/labs - Where new FreeRTOS products go to incubate.
-    Come and try FreeRTOS+TCP, our new open source TCP/IP stack for FreeRTOS.
-
-    http://www.OpenRTOS.com - Real Time Engineers ltd. license FreeRTOS to High
-    Integrity Systems ltd. to sell under the OpenRTOS brand.  Low cost OpenRTOS
-    licenses offer ticketed support, indemnification and commercial middleware.
-
-    http://www.SafeRTOS.com - High Integrity Systems also provide a safety
-    engineered and independently SIL3 certified version for use in safety and
-    mission critical applications that require provable dependability.
-
-    1 tab == 4 spaces!
+ * Some constants, hardware definitions and comments taken from ST's HAL driver
+ * library, COPYRIGHT(c) 2015 STMicroelectronics.
 */
 
-
-/*****************************************************************************
+/*
+ * FreeRTOS+TCP V2.3.4
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
- * See the following URL for configuration information.
- * http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/TCP_IP_Configuration.html
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- *****************************************************************************/
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * http://aws.amazon.com/freertos
+ * http://www.FreeRTOS.org
+ */
 
 #ifndef FREERTOS_IP_CONFIG_H
 #define FREERTOS_IP_CONFIG_H
@@ -81,6 +34,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "tcp_netstat.h"
 
 /* Define the byte order of the target MCU (the MCU FreeRTOS+TCP is executing
 on).  Valid options are pdFREERTOS_BIG_ENDIAN and pdFREERTOS_LITTLE_ENDIAN. */
@@ -90,26 +45,23 @@ on).  Valid options are pdFREERTOS_BIG_ENDIAN and pdFREERTOS_LITTLE_ENDIAN. */
 #define ipconfigDRIVER_INCLUDED_TX_IP_CHECKSUM		( 1 )
 #define ipconfigDRIVER_INCLUDED_RX_IP_CHECKSUM		( 1 )
 
-
 /* Several API's will block until the result is known, or the action has been
 performed, for example FreeRTOS_send() and FreeRTOS_recv().  The timeouts can be
 set per socket, using setsockopt().  If not set, the times below will be
 used as defaults. */
-#define ipconfigSOCK_DEFAULT_RECEIVE_BLOCK_TIME	( 5000 )
-#define	ipconfigSOCK_DEFAULT_SEND_BLOCK_TIME	( 5000 )
+#define ipconfigSOCK_DEFAULT_RECEIVE_BLOCK_TIME	( 5000U )
+#define	ipconfigSOCK_DEFAULT_SEND_BLOCK_TIME	( 5000U )
 
 #define ipconfigZERO_COPY_RX_DRIVER				( 1 )
 #define ipconfigZERO_COPY_TX_DRIVER				( 1 )
 
-//	ETH_TXBUFNB and ETH_RXBUFNB must be defined in "stm32f4xx_hal_conf.h"
-//	#define ETH_TXBUFNB			2
-//	#define ETH_RXBUFNB			8
+/* Include support for LLMNR: Link-local Multicast Name Resolution */
+#define ipconfigUSE_LLMNR					( 1 )
+#if ( ipconfigMULTI_INTERFACE != 0 )
+	#define ipconfigUSE_MDNS                    ( 1 )
+#endif
 
-/* Include support for LLMNR: Link-local Multicast Name Resolution
-(non-Microsoft) */
-#define ipconfigUSE_LLMNR					( 0 )
-
-/* Include support for NBNS: NetBIOS Name Service (Microsoft) */
+/* Include support for NBNS: NetBIOS Name Service */
 #define ipconfigUSE_NBNS					( 0 )
 
 /* Include support for DNS caching.  For TCP, having a small DNS cache is very
@@ -123,20 +75,22 @@ a socket. */
 through the FreeRTOS_gethostbyname() API function. */
 #define ipconfigUSE_DNS							1
 
-#define ipconfigUSE_DNS_CACHE					( 0 )
-#define ipconfigDNS_CACHE_ENTRIES				( 4 )
-#define ipconfigDNS_CACHE_NAME_LENGTH			( 10 )
+#define ipconfigUSE_DNS_CACHE					( 1 )
+#define ipconfigDNS_CACHE_NAME_LENGTH			( 65U )
+#define ipconfigDNS_CACHE_ENTRIES				( 12U )
+#define ipconfigDNS_REQUEST_ATTEMPTS		2 // ( 3 )
 #if( ipconfigUSE_DNS_CACHE != 0 )
 	#define ipconfigDNS_CACHE_ADDRESSES_PER_ENTRY	4U
 #else
 	#define ipconfigDNS_CACHE_ADDRESSES_PER_ENTRY	1U
 #endif
 
-#define ipconfigDNS_REQUEST_ATTEMPTS		( 4 )
-#define ipconfigDNS_USE_CALLBACKS			( 0 )
+#define ipconfigDNS_USE_CALLBACKS			( 1 )
 
-#define	ipconfigDNS_RECEIVE_BLOCK_TIME_TICKS	pdMS_TO_TICKS( 5000u )
-#define	ipconfigDNS_SEND_BLOCK_TIME_TICKS		pdMS_TO_TICKS( 5000u )
+#define ipconfigENDPOINT_DNS_ADDRESS_COUNT	3
+
+#define	ipconfigDNS_RECEIVE_BLOCK_TIME_TICKS	pdMS_TO_TICKS( 2500U )
+#define	ipconfigDNS_SEND_BLOCK_TIME_TICKS		pdMS_TO_TICKS( 2500U )
 
 #define ipconfigUSE_LINKED_RX_MESSAGES		0
 
@@ -149,22 +103,25 @@ configMAX_PRIORITIES is a standard FreeRTOS configuration parameter defined in
 FreeRTOSConfig.h, not FreeRTOSIPConfig.h. Consideration needs to be given as to
 the priority assigned to the task executing the IP stack relative to the
 priority assigned to tasks that use the IP stack. */
-#define ipconfigIP_TASK_PRIORITY			( configMAX_PRIORITIES - 2 )
+//#define ipconfigIP_TASK_PRIORITY			( configMAX_PRIORITIES - 2 )
+#define  ipconfigIP_TASK_PRIORITY			4
+#define  niEMAC_HANDLER_TASK_PRIORITY		5
+#define  ipconfigIPERF_PRIORITY_IPERF_TASK	6
 
 /* The size, in words (not bytes), of the stack allocated to the FreeRTOS+TCP
 task.  This setting is less important when the FreeRTOS Win32 simulator is used
 as the Win32 simulator only stores a fixed amount of information on the task
 stack.  FreeRTOS includes optional stack overflow detection, see:
 http://www.freertos.org/Stacks-and-stack-overflow-checking.html */
-#define ipconfigIP_TASK_STACK_SIZE_WORDS	( 5u * configMINIMAL_STACK_SIZE )
+#define ipconfigIP_TASK_STACK_SIZE_WORDS	( configMINIMAL_STACK_SIZE * 5U )
 
 /* ipconfigRAND32() is called by the IP stack to generate random numbers for
 things such as a DHCP transaction number or initial sequence number.  Random
 number generation is performed via this macro to allow applications to use their
 own random number generation method.  For example, it might be possible to
 generate a random number by sampling noise on an analogue input. */
-extern UBaseType_t uxRand( void );
-#define ipconfigRAND32()	uxRand()
+//extern UBaseType_t uxRand( void );
+//#define ipconfigRAND32()	uxRand()
 
 /* If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will call the
 network event hook at the appropriate times.  If ipconfigUSE_NETWORK_EVENT_HOOK
@@ -187,6 +144,8 @@ milliseconds can be converted to a time in ticks by dividing the time in
 milliseconds by portTICK_PERIOD_MS. */
 #define ipconfigUDP_MAX_SEND_BLOCK_TIME_TICKS ( pdMS_TO_TICKS( 5000u ) )
 
+/* #define ipconfigUDP_MAX_RX_PACKETS		4 */
+
 /* If ipconfigUSE_DHCP is 1 then FreeRTOS+TCP will attempt to retrieve an IP
 address, netmask, DNS server address and gateway address from a DHCP server.  If
 ipconfigUSE_DHCP is 0 then FreeRTOS+TCP will use a static IP address.  The
@@ -194,9 +153,11 @@ stack will revert to using the static IP address even when ipconfigUSE_DHCP is
 set to 1 if a valid configuration cannot be obtained from a DHCP server for any
 reason.  The static configuration used is that passed into the stack by the
 FreeRTOS_IPInit() function call. */
-#define ipconfigUSE_DHCP				1	//	1 // 0
+#define ipconfigUSE_DHCP				1
 #define ipconfigDHCP_REGISTER_HOSTNAME	1
 #define ipconfigDHCP_USES_UNICAST       1
+
+#define ipconfigUSE_DHCPv6				1
 
 /* When ipconfigUSE_DHCP is set to 1, DHCP requests will be sent out at
 increasing time intervals until either a reply is received from a DHCP server
@@ -205,7 +166,14 @@ ipconfigMAXIMUM_DISCOVER_TX_PERIOD.  The IP stack will revert to using the
 static IP address passed as a parameter to FreeRTOS_IPInit() if the
 re-transmission time interval reaches ipconfigMAXIMUM_DISCOVER_TX_PERIOD without
 a DHCP reply being received. */
-#define ipconfigMAXIMUM_DISCOVER_TX_PERIOD		( pdMS_TO_TICKS( 30000 ) )
+#define ipconfigMAXIMUM_DISCOVER_TX_PERIOD		( pdMS_TO_TICKS( 30000U ) )
+
+#define dhcpINITIAL_DHCP_TX_PERIOD			pdMS_TO_TICKS( 5000U )
+//#define dhcpINITIAL_TIMER_PERIOD			pdMS_TO_TICKS( 2000 )
+//#define dhcpINITIAL_TIMER_PERIOD			pdMS_TO_TICKS( 30U )
+#define dhcpINITIAL_TIMER_PERIOD            pdMS_TO_TICKS( 250U )
+
+#define ipconfigUSE_DHCP_HOOK				( 0 )
 
 #define ipconfigUSE_RA			( 1 )
 
@@ -218,19 +186,23 @@ message is sent to a remote IP address that does not already appear in the ARP
 cache then the UDP message is replaced by a ARP message that solicits the
 required MAC address information.  ipconfigARP_CACHE_ENTRIES defines the maximum
 number of entries that can exist in the ARP table at any one time. */
-#define ipconfigARP_CACHE_ENTRIES		6
+#define ipconfigARP_CACHE_ENTRIES		16
 
 /* ARP requests that do not result in an ARP response will be re-transmitted a
 maximum of ipconfigMAX_ARP_RETRANSMISSIONS times before the ARP request is
 aborted. */
-#define ipconfigMAX_ARP_RETRANSMISSIONS ( 5 )
+#define ipconfigMAX_ARP_RETRANSMISSIONS			( 3 )
+#define ipconfigARP_STORES_REMOTE_ADDRESSES		0 // 1 // ( 0 )
+
+#define arpIP_CLASH_MAX_RETRIES                 3
 
 /* ipconfigMAX_ARP_AGE defines the maximum time between an entry in the ARP
 table being created or refreshed and the entry being removed because it is stale.
 New ARP requests are sent for ARP cache entries that are nearing their maximum
 age.  ipconfigMAX_ARP_AGE is specified in tens of seconds, so a value of 150 is
 equal to 1500 seconds (or 25 minutes). */
-#define ipconfigMAX_ARP_AGE			150
+//#define ipconfigMAX_ARP_AGE			150
+#define ipconfigMAX_ARP_AGE			5
 
 /* Implementing FreeRTOS_inet_addr() necessitates the use of string handling
 routines, which are relatively large.  To save code space the full
@@ -279,7 +251,7 @@ aborted. */
 #define ipconfigUSE_TCP				( 1 )
 
 /* USE_WIN: Let TCP use windowing mechanism. */
-#define ipconfigUSE_TCP_WIN			1
+#define ipconfigUSE_TCP_WIN			( 1 )
 
 /* The MTU is the maximum number of bytes the payload of a network frame can
 contain.  For normal Ethernet V2 frames the maximum MTU is 1500.  Setting a
@@ -288,15 +260,7 @@ ipconfigCAN_FRAGMENT_OUTGOING_PACKETS is 1 then (ipconfigNETWORK_MTU - 28) must
 be divisible by 8. */
 
 #define ipconfigNETWORK_MTU						1500u
-//#define ipconfigNETWORK_MTU						( 1024 + 40 )
-
-/*#define ipconfigNETWORK_MTU					(  512 + 40 ) */
-/* #define ipconfigNETWORK_MTU					( 1024 + 40 ) */
-
 /*#define ipconfigNETWORK_MTU					(1024+40)*/
-/*
-#define ipconfigTCP_MSS						1024
-*/
 
 /* If ipconfigREPLY_TO_INCOMING_PINGS is set to 1 then the IP stack will
 generate replies to incoming ICMP echo (ping) requests. */
@@ -308,7 +272,11 @@ FreeRTOS_SendPingRequest() API function is available. */
 
 /* If ipconfigSUPPORT_SELECT_FUNCTION is set to 1 then the FreeRTOS_select()
 (and associated) API function is available. */
+#if( USE_PLUS_FAT != 0 )
+	#define ipconfigSUPPORT_SELECT_FUNCTION				1
+#else
 #define ipconfigSUPPORT_SELECT_FUNCTION				1
+#endif
 
 /* If ipconfigFILTER_OUT_NON_ETHERNET_II_FRAMES is set to 1 then Ethernet frames
 that are not in Ethernet II format will be dropped.  This option is included for
@@ -351,13 +319,11 @@ real program memory (RAM or flash) or just has a random non-zero value. */
 /* Include support for TCP hang protection.  All sockets in a connecting or
 disconnecting stage will timeout after a period of non-activity. */
 #define ipconfigTCP_HANG_PROTECTION				( 1 )
-#define ipconfigTCP_HANG_PROTECTION_TIME		( 30 )
+#define ipconfigTCP_HANG_PROTECTION_TIME		( 10 )
 
 /* Include support for TCP keep-alive messages. */
 #define ipconfigTCP_KEEP_ALIVE				( 1 )
 #define ipconfigTCP_KEEP_ALIVE_INTERVAL		( 20 ) /* in seconds */
-
-#define ipconfigUSE_DHCP_HOOK				( 1 )
 
 /* The example IP trace macros are included here so the definitions are
 available in all the FreeRTOS+TCP source files. */
@@ -388,15 +354,15 @@ constants that follow. */
 UDP logging facility is used. */
 extern int lUDPLoggingPrintf( const char *pcFormatString, ... ) __attribute__ ((format (__printf__, 1, 2)));
 
+int snprintf(char *str, size_t size, const char *format, ...) __attribute__ ((format (__printf__, 3, 4)));
+
 /* Set to 1 to print out debug messages.  If ipconfigHAS_DEBUG_PRINTF is set to
 1 then FreeRTOS_debug_printf should be defined to the function used to print
 out the debugging messages. */
 
-#define 	ipconfigHAS_DEBUG_PRINTF	0
-
-#ifndef ipconfigHAS_DEBUG_PRINTF
+//#ifndef ipconfigHAS_DEBUG_PRINTF
 	#define ipconfigHAS_DEBUG_PRINTF	1
-#endif
+//#endif
 
 #if( ipconfigHAS_DEBUG_PRINTF == 1 )
 	#define FreeRTOS_debug_printf( X )	( void ) lUDPLoggingPrintf X
@@ -414,7 +380,7 @@ messages. */
 	#define FreeRTOS_printf(X)			( void ) lUDPLoggingPrintf X
 #endif
 
-#define ipconfigFTP_ZERO_COPY_ALIGNED_WRITES	0
+#define ipconfigFTP_ZERO_COPY_ALIGNED_WRITES	1
 #define ipconfigSUPPORT_SIGNALS					1
 
 #define ipconfigMAC_INTERRUPT_PRIORITY	( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY )
@@ -435,10 +401,10 @@ messages. */
 	#define ipconfigIPERF_RX_BUFSIZE				( 8 * ipconfigTCP_MSS )
 	#define ipconfigIPERF_RX_WINSIZE				( 6 )
 */
-#define ipconfigIPERF_TX_BUFSIZE				( 6 * ipconfigTCP_MSS )
-#define ipconfigIPERF_TX_WINSIZE				( 4 )
-#define ipconfigIPERF_RX_BUFSIZE				( 6 * ipconfigTCP_MSS )
-#define ipconfigIPERF_RX_WINSIZE				( 4 )
+#define ipconfigIPERF_TX_BUFSIZE				( 4 * ipconfigTCP_MSS )
+#define ipconfigIPERF_TX_WINSIZE				( 3 )
+#define ipconfigIPERF_RX_BUFSIZE				( 4 * ipconfigTCP_MSS )
+#define ipconfigIPERF_RX_WINSIZE				( 3 )
 
 /* The iperf module declares a character buffer to store its send data. */
 #define ipconfigIPERF_RECV_BUFFER_SIZE			( 2 * ipconfigTCP_MSS )
@@ -447,17 +413,13 @@ messages. */
 
 #define ipconfigETHERNET_MINIMUM_PACKET_BYTES		( 60 )
 
-#define ipconfigENDPOINT_DNS_ADDRESS_COUNT		( 2 )
-
-#define ipconfigARP_STORES_REMOTE_ADDRESSES		( 0 )
-
 #define ipconfigETHERNET_DRIVER_FILTERS_PACKETS	( 1 )
 
 #define ipconfigSOCKET_HAS_USER_SEMAPHORE		( 1 )
 
 #define ipconfigUSE_LOOPBACK					( 1 )
 
-#define ipconfigSOCKET_HAS_USER_WAKE_CALLBACK	( 0 )
+#define ipconfigSOCKET_HAS_USER_WAKE_CALLBACK	( 1 )
 
 /*
 #define ipconfigUSE_TCP_TIMESTAMPS				( 1 )
@@ -465,10 +427,92 @@ messages. */
 #define ipconfigDHCP_FALL_BACK_AUTO_IP			( 1 )
 */
 
+#define ipconfigDHCP_FALL_BACK_AUTO_IP			( 1 )
+
 #define ipconfigRA_SEARCH_COUNT				( 3u )
-#define ipconfigRA_SEARCH_TIME_OUT_MSEC		( 1000u )
+#define ipconfigRA_SEARCH_TIME_OUT_MSEC		( 3000U )
 #define ipconfigRA_IP_TEST_COUNT			( 3u )
-#define ipconfigRA_IP_TEST_TIME_OUT_MSEC	( 500u )
+#define ipconfigRA_IP_TEST_TIME_OUT_MSEC	( 3000U )
+
+/****** UDP logging settings. *************************************************/
+
+/* If set to 1 then each message sent via the UDP logging facility will end
+with \r\n.  If set to 0 then each message sent via the UDP logging facility will
+end with \n. */
+#define configUDP_LOGGING_NEEDS_CR_LF  ( 0 )
+
+/* Sets the maximum length for a string sent via the UDP logging facility. */
+#define configUDP_LOGGING_STRING_LENGTH	( 200 )
+
+/* The UDP logging facility buffers messages until the UDP logging task is able
+to transmit them.  configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER sets the maximum
+number of messages that can be buffered at any one time. */
+#define	configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER	( 40 )
+
+/* The UDP logging facility creates a task to send buffered messages to the UDP
+port.  configUDP_LOGGING_TASK_STACK_SIZE sets the task's stack size. */
+#define	configUDP_LOGGING_TASK_STACK_SIZE  	( 512 )
+
+/* The UDP logging facility creates a task to send buffered messages to the UDP
+port.  configUDP_LOGGING_TASK_PRIORITY sets the task's priority.  It is
+suggested to give the task a low priority to ensure it does not adversely effect
+the performance of other TCP/IP stack activity. */
+#define configUDP_LOGGING_TASK_PRIORITY   	( tskIDLE_PRIORITY  + 2 )
+
+/* The UDP port to which the UDP logging facility sends messages. */
+#define configUDP_LOGGING_PORT_REMOTE		2403
+
+/* The local UDP port to which commands can be sent. */
+#define configUDP_LOGGING_PORT_LOCAL		2402
+
+#define logUDP_LOGGING_BLOCK_TIME_MS	( 1000U )
+
+/* You may define a specific remote address for UDP logging.
+ * By default, the logging will be sent to the local broadcast address,
+ * e.g. 192.168.1.25. */
+/*
+ *  #define configUDP_LOGGING_ADDR0  192
+ *  #define configUDP_LOGGING_ADDR1  168
+ *  #define configUDP_LOGGING_ADDR2  1
+ *  #define configUDP_LOGGING_ADDR3  101
+ */
+
+#define ipconfigNETWORK_BUFFER_DEBUGGING    0
+
+	typedef struct xNetworkBufferStats
+	{
+		uint32_t ulAllocated;
+		uint32_t ulFailed;
+		uint32_t ulReleased;
+	} NetworkBufferStats_t;
+	extern NetworkBufferStats_t xNetworkBufferStats;
+
+#define iptraceFAILED_TO_OBTAIN_NETWORK_BUFFER()	xNetworkBufferStats.ulFailed++;
+#define iptraceNETWORK_BUFFER_OBTAINED( pxBuffer )	do { if( pxBuffer != 0 ) { xNetworkBufferStats.ulAllocated++; } } while( ipFALSE_BOOL )
+#define iptraceNETWORK_BUFFER_RELEASED(  pxBuffer )	do { if( pxBuffer != 0 ) { xNetworkBufferStats.ulReleased++;  } } while( ipFALSE_BOOL )
+
+//#define ipconfigCOMPATIBLE_WITH_SINGLE  1
+
+#define ipconfigUDP_PASS_ZERO_CHECKSUM_PACKETS  1
+
+/* Forbid that our packets will get fragmented. */
+#define ipconfigFORCE_IP_DONT_FRAGMENT    0
+
+#define ipconfigUSE_SetSocketID           0
+
+/*
+#define iptraceNETWORK_BUFFER_OBTAINED( pxReturn ) \
+	do {\
+		pxReturn->usPort = 0U; \
+		pxReturn->usBoundPort = 0U; \
+	} while( ipFALSE_BOOL )
+*/
+
+#if ( ipconfigMULTI_INTERFACE == 0 )
+	#define iptraceCREATING_ARP_REQUEST( IPAddress ) \
+		if( *ipLOCAL_IP_ADDRESS_POINTER != IPAddress ) \
+			lUDPLoggingPrintf( "ARP renew %xip\n", ( unsigned ) FreeRTOS_htonl( IPAddress ) )
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

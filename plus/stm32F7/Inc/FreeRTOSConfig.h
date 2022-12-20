@@ -227,7 +227,7 @@ set to 0, or ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted.
 #define configGATEWAY_ADDR0	192
 #define configGATEWAY_ADDR1	168
 #define configGATEWAY_ADDR2	2
-#define configGATEWAY_ADDR3	5
+#define configGATEWAY_ADDR3	1
 
 /* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and
 208.67.220.220.  Used if ipconfigUSE_DHCP is set to 0, or ipconfigUSE_DHCP is set
@@ -259,37 +259,6 @@ http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/examples_FreeRTOS_simula
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
 /* USER CODE END Defines */
-
-/****** UDP logging settings. *************************************************/
-
-/* If set to 1 then each message sent via the UDP logging facility will end
-with \r\n.  If set to 0 then each message sent via the UDP logging facility will
-end with \n. */
-#define configUDP_LOGGING_NEEDS_CR_LF  ( 0 )
-
-/* Sets the maximum length for a string sent via the UDP logging facility. */
-#define configUDP_LOGGING_STRING_LENGTH	( 200 )
-
-/* The UDP logging facility buffers messages until the UDP logging task is able
-to transmit them.  configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER sets the maximum
-number of messages that can be buffered at any one time. */
-#define	configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER	( 20 )
-
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_STACK_SIZE sets the task's stack size. */
-#define	configUDP_LOGGING_TASK_STACK_SIZE  	( 512 )
-
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_PRIORITY sets the task's priority.  It is
-suggested to give the task a low priority to ensure it does not adversely effect
-the performance of other TCP/IP stack activity. */
-#define configUDP_LOGGING_TASK_PRIORITY   	( tskIDLE_PRIORITY  + 2 )
-
-/* The UDP port to which the UDP logging facility sends messages. */
-#define configUDP_LOGGING_PORT_REMOTE		2403
-
-/* The local UDP port to which commands can be sent. */
-#define configUDP_LOGGING_PORT_LOCAL		2402
 
 /* The STM3240G-EVAL board uses pin C13 for card detection. */
 #define configSD_DETECT_PIN				GPIO_PIN_13

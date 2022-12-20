@@ -1,70 +1,26 @@
 /*
-    FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
-    All rights reserved
-
-    VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
-
-    This file is part of the FreeRTOS distribution.
-
-    FreeRTOS is free software; you can redistribute it and/or modify it under
-    the terms of the GNU General Public License (version 2) as published by the
-    Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
-
-    ***************************************************************************
-    >>!   NOTE: The modification to the GPL is included to allow you to     !<<
-    >>!   distribute a combined work that includes FreeRTOS without being   !<<
-    >>!   obliged to provide the source code for proprietary components     !<<
-    >>!   outside of the FreeRTOS kernel.                                   !<<
-    ***************************************************************************
-
-    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
-    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-    FOR A PARTICULAR PURPOSE.  Full license text is available on the following
-    link: http://www.freertos.org/a00114.html
-
-    ***************************************************************************
-     *                                                                       *
-     *    FreeRTOS provides completely free yet professionally developed,    *
-     *    robust, strictly quality controlled, supported, and cross          *
-     *    platform software that is more than just the market leader, it     *
-     *    is the industry's de facto standard.                               *
-     *                                                                       *
-     *    Help yourself get started quickly while simultaneously helping     *
-     *    to support the FreeRTOS project by purchasing a FreeRTOS           *
-     *    tutorial book, reference manual, or both:                          *
-     *    http://www.FreeRTOS.org/Documentation                              *
-     *                                                                       *
-    ***************************************************************************
-
-    http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-    the FAQ page "My application does not run, what could be wrong?".  Have you
-    defined configASSERT()?
-
-    http://www.FreeRTOS.org/support - In return for receiving this top quality
-    embedded software for free we request you assist our global community by
-    participating in the support forum.
-
-    http://www.FreeRTOS.org/training - Investing in training allows your team to
-    be as productive as possible as early as possible.  Now you can receive
-    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-    Ltd, and the world's leading authority on the world's leading RTOS.
-
-    http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
-    including FreeRTOS+Trace - an indispensable productivity tool, a DOS
-    compatible FAT file system, and our tiny thread aware UDP/IP stack.
-
-    http://www.FreeRTOS.org/labs - Where new FreeRTOS products go to incubate.
-    Come and try FreeRTOS+TCP, our new open source TCP/IP stack for FreeRTOS.
-
-    http://www.OpenRTOS.com - Real Time Engineers ltd. license FreeRTOS to High
-    Integrity Systems ltd. to sell under the OpenRTOS brand.  Low cost OpenRTOS
-    licenses offer ticketed support, indemnification and commercial middleware.
-
-    http://www.SafeRTOS.com - High Integrity Systems also provide a safety
-    engineered and independently SIL3 certified version for use in safety and
-    mission critical applications that require provable dependability.
-
-    1 tab == 4 spaces!
+ * FreeRTOS+TCP V2.3.1
+ * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * http://aws.amazon.com/freertos
+ * http://www.FreeRTOS.org
 */
 
 #ifndef FREERTOS_CONFIG_H
@@ -92,12 +48,14 @@
     extern uint32_t SystemCoreClock;
 #endif
 
+#define configSUPPORT_STATIC_ALLOCATION         1
+
 #define configUSE_PREEMPTION					1
 #define configUSE_IDLE_HOOK						0
 #define configUSE_TICK_HOOK						0
 #define configCPU_CLOCK_HZ						( SystemCoreClock )
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	1
-#define configTICK_RATE_HZ						( ( TickType_t ) 1000 )
+#define configTICK_RATE_HZ						( 1000U )
 #define configMAX_PRIORITIES					( 7 )
 #define configMINIMAL_STACK_SIZE				( ( uint16_t ) 128 )
 #define configMAX_TASK_NAME_LEN					( 16 )
@@ -182,10 +140,9 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY  \
 		( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
 
-#define  USE_FULL_ASSERT	0
+#define  USE_FULL_ASSERT	    0 // 1
 #define  configASSERT_DEFINED	1
 
-#ifndef	__IAR_SYSTEMS_ASM__
 	#if( USE_FULL_ASSERT != 0 )
 		/* Normal assert() semantics without relying on the provision of an assert.h
 		header file. */
@@ -194,7 +151,6 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 	#else
 		#define configASSERT( x ) do {} while( 0 )
 	#endif
-#endif
 
 /* USER CODE BEGIN 1 */
 
@@ -222,14 +178,14 @@ configure the real network connection to use. */
 #define configMAC_ADDR2		0x22
 #define configMAC_ADDR3		0x33
 #define configMAC_ADDR4		0x44
-#define configMAC_ADDR5		0x56
+#define configMAC_ADDR5		0x62
 
 /* Default IP address configuration.  Used in case ipconfigUSE_DHCP is set to 0, or
 ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
 #define configIP_ADDR0		192
 #define configIP_ADDR1		168
 #define configIP_ADDR2		2
-#define configIP_ADDR3		114
+#define configIP_ADDR3		90
 
 /* Default gateway IP address configuration.  Used in case ipconfigUSE_DHCP is
 set to 0, or ipconfigUSE_DHCP is set to 1 but a DHCP server cannot be contacted. */
@@ -272,37 +228,6 @@ http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/examples_FreeRTOS_simula
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
 /* USER CODE END Defines */
-
-/****** UDP logging settings. *************************************************/
-
-/* If set to 1 then each message sent via the UDP logging facility will end
-with \r\n.  If set to 0 then each message sent via the UDP logging facility will
-end with \n. */
-#define configUDP_LOGGING_NEEDS_CR_LF  ( 0 )
-
-/* Sets the maximum length for a string sent via the UDP logging facility. */
-#define configUDP_LOGGING_STRING_LENGTH	( 200 )
-
-/* The UDP logging facility buffers messages until the UDP logging task is able
-to transmit them.  configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER sets the maximum
-number of messages that can be buffered at any one time. */
-#define	configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER	( 20 )
-
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_STACK_SIZE sets the task's stack size. */
-#define	configUDP_LOGGING_TASK_STACK_SIZE  	( 512 )
-
-/* The UDP logging facility creates a task to send buffered messages to the UDP
-port.  configUDP_LOGGING_TASK_PRIORITY sets the task's priority.  It is
-suggested to give the task a low priority to ensure it does not adversely effect
-the performance of other TCP/IP stack activity. */
-#define configUDP_LOGGING_TASK_PRIORITY   	( tskIDLE_PRIORITY  + 2 )
-
-/* The UDP port to which the UDP logging facility sends messages. */
-#define configUDP_LOGGING_PORT_REMOTE		2403
-
-/* The local UDP port to which commands can be sent. */
-#define configUDP_LOGGING_PORT_LOCAL		2402
 
 /* The STM3240G-EVAL board uses pin H13 for card detection. */
 #define configSD_DETECT_PIN				GPIO_PIN_13

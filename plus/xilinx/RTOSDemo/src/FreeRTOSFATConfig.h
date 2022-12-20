@@ -240,7 +240,7 @@ the tree at a time.  For example mkdir( "/etc/settings/network", pdTRUE );.
 
 Set to 0 to use the normal mkdir() semantics (without the additional
 parameter). */
-#define	ffconfigMKDIR_RECURSIVE	 0
+#define	ffconfigMKDIR_RECURSIVE	 1
 
 /* Set to a function that will be used for all dynamic memory allocations.
 Setting to pvPortMalloc() will use the same memory allocator as FreeRTOS. */
@@ -258,7 +258,7 @@ Set to 0 to calculate these values as a 32-bit number. */
 
 /* Defines the maximum number of partitions (and also logical partitions)
 that can be recognised. */
-#define	ffconfigMAX_PARTITIONS 1
+#define	ffconfigMAX_PARTITIONS    5
 
 /* Defines how many drives can be combined in total.  Should be set to at
 least 2. */
@@ -323,6 +323,20 @@ extern int lUDPLoggingPrintf( const char *apFmt, ... );
 #define ffconfigFAT16_ROOT_SECTORS		8
 
 #define sdQUICK_WAIT_INT_TIME_OUT_MS	250uL
+
+#define ffconfigRAM_SECTOR_SIZE			512U
+
+//#undef ffconfigOPTIMISE_UNALIGNED_ACCESS
+//#undef ffconfigPATH_CACHE_DEPTH
+//#undef ffconfigHASH_CACHE_DEPTH
+//
+///* Settings from Poland: */
+//
+//#define ffconfigOPTIMISE_UNALIGNED_ACCESS 0
+//#define ffconfigPATH_CACHE_DEPTH          5
+//#define ffconfigHASH_CACHE_DEPTH          16
+
+#define ffconfigDEBUG                       1
 
 #endif /* _FF_CONFIG_H_ */
 

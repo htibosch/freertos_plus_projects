@@ -210,18 +210,18 @@ char *pcRAMBuffer, *pcFileName;
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Create nested subdirectories from the root of the mount. */
-	iReturned = ff_mkdir( "sub1" );
+	iReturned = ff_mkdir( "sub1", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2" );
+	iReturned = ff_mkdir( "sub1/sub2", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2/sub3" );
+	iReturned = ff_mkdir( "sub1/sub2/sub3", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "sub1/sub2/sub3/sub4/" );
+	iReturned = ff_mkdir( "sub1/sub2/sub3/sub4/", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* This is the non-recursive version, so the following is expected to
 	fail. */
-	iReturned = ff_mkdir( "sub1/sub2/subx/suby" );
+	iReturned = ff_mkdir( "sub1/sub2/subx/suby", pdFALSE );
 	configASSERT( iReturned == -1 );
 
 	/* Move into sub3. */
@@ -229,7 +229,7 @@ char *pcRAMBuffer, *pcFileName;
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Make more directories using relative paths. */
-	iReturned = ff_mkdir( "../../sub2/sub3/sub4/sub5" );
+	iReturned = ff_mkdir( "../../sub2/sub3/sub4/sub5", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Sub6 does not exist, expect this to fail. */
@@ -946,9 +946,9 @@ char cReadBuffer[ 45 ];
 	configASSERT( iReturned == -1 );
 
 	/* Create subdirectories into/from which files will be moved. */
-	iReturned = ff_mkdir( "source_dir" );
+	iReturned = ff_mkdir( "source_dir", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
-	iReturned = ff_mkdir( "destination_dir" );
+	iReturned = ff_mkdir( "destination_dir", pdFALSE );
 	configASSERT( iReturned == pdFREERTOS_ERRNO_NONE );
 
 	/* Create a file in source_dir then write some data to it. */
@@ -1188,7 +1188,7 @@ const char * const pcBasePath = ( char * ) pvParameters;
 	for( ;; )
 	{
 		/* Create the directory used as a base by this instance of this task. */
-		ff_mkdir( pcBasePath );
+		ff_mkdir( pcBasePath, pdFALSE );
 
 		/* Create a few example files on the disk. */
 		vCreateAndVerifyExampleFiles( pcBasePath );

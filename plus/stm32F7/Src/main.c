@@ -1,77 +1,32 @@
 /*
-	FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
-	All rights reserved
-
-	VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
-
-	This file is part of the FreeRTOS distribution.
-
-	FreeRTOS is free software; you can redistribute it and/or modify it under
-	the terms of the GNU General Public License (version 2) as published by the
-	Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
-
-	***************************************************************************
-	>>!   NOTE: The modification to the GPL is included to allow you to     !<<
-	>>!   distribute a combined work that includes FreeRTOS without being   !<<
-	>>!   obliged to provide the source code for proprietary components     !<<
-	>>!   outside of the FreeRTOS kernel.                                   !<<
-	***************************************************************************
-
-	FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
-	WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-	FOR A PARTICULAR PURPOSE.  Full license text is available on the following
-	link: http://www.freertos.org/a00114.html
-
-	***************************************************************************
-	 *                                                                       *
-	 *    FreeRTOS provides completely free yet professionally developed,    *
-	 *    robust, strictly quality controlled, supported, and cross          *
-	 *    platform software that is more than just the market leader, it     *
-	 *    is the industry's de facto standard.                               *
-	 *                                                                       *
-	 *    Help yourself get started quickly while simultaneously helping     *
-	 *    to support the FreeRTOS project by purchasing a FreeRTOS           *
-	 *    tutorial book, reference manual, or both:                          *
-	 *    http://www.FreeRTOS.org/Documentation                              *
-	 *                                                                       *
-	***************************************************************************
-
-	http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
-	the FAQ page "My application does not run, what could be wrong?".  Have you
-	defined configASSERT()?
-
-	http://www.FreeRTOS.org/support - In return for receiving this top quality
-	embedded software for free we request you assist our global community by
-	participating in the support forum.
-
-	http://www.FreeRTOS.org/training - Investing in training allows your team to
-	be as productive as possible as early as possible.  Now you can receive
-	FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
-	Ltd, and the world's leading authority on the world's leading RTOS.
-
-	http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
-	including FreeRTOS+Trace - an indispensable productivity tool, a DOS
-	compatible FAT file system, and our tiny thread aware UDP/IP stack.
-
-	http://www.FreeRTOS.org/labs - Where new FreeRTOS products go to incubate.
-	Come and try FreeRTOS+TCP, our new open source TCP/IP stack for FreeRTOS.
-
-	http://www.OpenRTOS.com - Real Time Engineers ltd. license FreeRTOS to High
-	Integrity Systems ltd. to sell under the OpenRTOS brand.  Low cost OpenRTOS
-	licenses offer ticketed support, indemnification and commercial middleware.
-
-	http://www.SafeRTOS.com - High Integrity Systems also provide a safety
-	engineered and independently SIL3 certified version for use in safety and
-	mission critical applications that require provable dependability.
-
-	1 tab == 4 spaces!
-*/
-
-/*
- * Instructions for using this project are provided on:
- * http://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/examples_FreeRTOS_simulator.html
+ * Some constants, hardware definitions and comments taken from ST's HAL driver
+ * library, COPYRIGHT(c) 2015 STMicroelectronics.
  */
 
+/*
+ * FreeRTOS+TCP V2.3.4
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * http://aws.amazon.com/freertos
+ * http://www.FreeRTOS.org
+ */
 
 /* Standard includes. */
 #include <stdio.h>
@@ -94,16 +49,19 @@
 #include "tcp_mem_stats.h"
 #include "NetworkBufferManagement.h"
 #include "NetworkInterface.h"
+#include "FreeRTOS_IP_Private.h"
 #if( ipconfigMULTI_INTERFACE != 0 )
 	#include "FreeRTOS_Routing.h"
+	#include "FreeRTOS_ND.h"
 #endif
-
 
 /* FreeRTOS+FAT includes. */
 #include "ff_headers.h"
 #include "ff_stdio.h"
 #include "ff_ramdisk.h"
 #include "ff_sddisk.h"
+
+#define EXTERN_C  extern
 
 #if USE_LOG_EVENT
 	#include "eventLogging.h"
@@ -119,22 +77,73 @@
 #endif
 
 //#define __STM32_HAL_LEGACY   1
+#include "date_and_time.h"
 
 /* ST includes. */
 #include "stm32f7xx_hal.h"
 #include "stm32fxx_hal_eth.h"
 
-#include "plus_echo_server.h"
+#if( USE_TCP_DEMO_CLI != 0 )
+	#include "plus_tcp_demo_cli.h"
+#endif
+
+#if( HAS_AUDIO != 0 )
+	#include "playerRecorder.h"
+#endif
+
+/* SDRAM on STM32F746g discovery_sdram */
+/* See Framework/mysource/stm32746g_discovery_sdram.c */
+#define SDRAM_START  0xC0000000U
+#define SDRAM_SIZE  ( 8U * 1024U * 1024U )
+
+/* The following function is called before FreeRTOS has started.
+ * It loops for a certain amount of msec. */
+EXTERN_C void BM_Delay( uint32_t ulDelayMS );
+
+
+//#if defined( MBEDTLS_PLATFORM_TIME_TYPE_MACRO )
+//	#error 1
+//#else
+//	#error 2
+//#endif
+//
+//#if defined( MBEDTLS_PLATFORM_TIME_ALT )
+//	#error 3
+//#else
+//	#error 4
+//#endif
+//
+//#if defined( MBEDTLS_PLATFORM_TIME_MACRO )
+//	#error 5
+//#else
+//	#error 6
+//#endif
+
+#if( ipconfigMULTI_INTERFACE != 0 )
+	void showEndPoint( NetworkEndPoint_t *pxEndPoint );
+#else
+	#ifndef ipSIZE_OF_IPv4_ADDRESS
+		#define ipSIZE_OF_IPv4_ADDRESS		4
+	#endif
+	#define FREERTOS_AF_INET4			FREERTOS_AF_INET
+#endif
+
+#if( HAS_ECHO_TEST != 0 )
+	/* The CLI command "plus" will start an echo server. */
+	#include "plus_echo_server.h"
+#endif
 
 //#include "cmsis_os.h"
 /* FTP and HTTP servers execute in the TCP server work task. */
 #define mainTCP_SERVER_TASK_PRIORITY	( tskIDLE_PRIORITY + 3 )
 #define	mainTCP_SERVER_STACK_SIZE		2048
+#define	mainFAT_SERVER_STACK_SIZE		( 1024U )
 
+/* Some macros related to +FAT testing. */
 #define	mainFAT_TEST_STACK_SIZE			2048
-
 #define mainRUN_STDIO_TESTS				0
 #define mainHAS_RAMDISK					0
+#define mainRAM_DISK_NAME               "/ram"
 #define mainHAS_SDCARD					1
 #define mainSD_CARD_DISK_NAME			"/"
 #define mainSD_CARD_TESTING_DIRECTORY	"/fattest"
@@ -147,49 +156,70 @@ exclude the relevant server. */
 #define mainCREATE_FTP_SERVER			1
 #define mainCREATE_HTTP_SERVER 			1
 
+/* The function ff_mkdir() may have a second parameter which allows
+ * recursive creation of directories. */
+#if( ffconfigMKDIR_RECURSIVE != 0 )
+	#define MKDIR_RECURSE  , pdFALSE
+#else
+	#define MKDIR_RECURSE
+#endif
 
 
 /* Define names that will be used for DNS, LLMNR and NBNS searches. */
 #define mainHOST_NAME					"stm"
-#define mainDEVICE_NICK_NAME			"stm32f4"
+#define mainDEVICE_NICK_NAME			"stm32f7"
 
 
 #ifdef HAL_WWDG_MODULE_ENABLED
 	#warning Why enable HAL_WWDG_MODULE_ENABLED
 #endif
 
+#if( ipconfigUSE_DNS_CACHE == 0 )
+	#warning Please enable ipconfigUSE_DNS_CACHE
+#endif
+
 #ifndef GPIO_SPEED_LOW
+    /* Not all versions of the HAL have these macros defines. */
 	#define  GPIO_SPEED_LOW         ((uint32_t)0x00000000)  /*!< Low speed     */
 	#define  GPIO_SPEED_MEDIUM      ((uint32_t)0x00000001)  /*!< Medium speed  */
 	#define  GPIO_SPEED_FAST        ((uint32_t)0x00000002)  /*!< Fast speed    */
 	#define  GPIO_SPEED_HIGH        ((uint32_t)0x00000003)  /*!< High speed    */
 #endif
 
-RNG_HandleTypeDef hrng;
+#define logPrintf  lUDPLoggingPrintf
+
+/* Random Number Generator. */
+static RNG_HandleTypeDef hrng;
 
 int verboseLevel;
 
-BaseType_t xRandom32( uint32_t *pulValue );
+typedef enum {
+	eIPv4 = 0x01,
+	eIPv6 = 0x02,
+} eIPVersion;
+
+/* This variable is allowed for testing mDNS/LLMNR requests
+ * in all combinations. */
+eIPVersion allowIPVersion = ( eIPVersion ) ( ( uint8_t ) eIPv4 | ( uint8_t ) eIPv6 );
 
 FF_Disk_t *pxSDDisk;
-#if( mainHAS_RAMDISK != 0 )
-	static FF_Disk_t *pxRAMDisk;
-#endif
+static FF_Disk_t *pxRAMDisk;
 
-extern int zero_divisor;
 static TCPServer_t *pxTCPServer = NULL;
+
+enum EStartupPhase {
+    EStartupWait,
+	EStartupStart,
+	EStartupStarted
+};
+
+static volatile enum EStartupPhase xStartServices = EStartupWait;
 
 #ifndef ARRAY_SIZE
 #	define	ARRAY_SIZE( x )	( int )( sizeof( x ) / sizeof( x )[ 0 ] )
 #endif
 
-/*
- * Just seeds the simple pseudo random number generator.
- */
-static void prvSRand( UBaseType_t ulSeed );
-uint32_t ulInitialSeed;
-
-static SemaphoreHandle_t xServerSemaphore;
+SemaphoreHandle_t xServerSemaphore;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -199,14 +229,16 @@ static SemaphoreHandle_t xServerSemaphore;
  */
 static void prvCreateDiskAndExampleFiles( void );
 
-extern void vStdioWithCWDTest( const char *pcMountPath );
-extern void vCreateAndVerifyExampleFiles( const char *pcMountPath );
+EXTERN_C void vStdioWithCWDTest( const char *pcMountPath );
+EXTERN_C void vCreateAndVerifyExampleFiles( const char *pcMountPath );
+
+static void check_disk_presence(void);
 
 /*
  * The task that runs the FTP and HTTP servers.
  */
-
 static void prvServerWorkTask( void *pvParameters );
+static BaseType_t vHandleOtherCommand( Socket_t xSocket, char *pcBuffer );
 
 /*
  * Configure the hardware as necessary to run this demo.
@@ -223,20 +255,8 @@ static void heapInit( void );
 void vShowTaskTable( BaseType_t aDoClear );
 void vIPerfInstall( void );
 
-void realloc_test();
-
 void tcpServerStart();
 void tcpServerWork();
-
-
-/* The default IP and MAC address used by the demo.  The address configuration
-defined here will be used if ipconfigUSE_DHCP is 0, or if ipconfigUSE_DHCP is
-1 but a DHCP server could not be contacted.  See the online documentation for
-more information. */
-static const uint8_t ucIPAddress[ 4 ] = { configIP_ADDR0, configIP_ADDR1, configIP_ADDR2, configIP_ADDR3 };
-static const uint8_t ucNetMask[ 4 ] = { configNET_MASK0, configNET_MASK1, configNET_MASK2, configNET_MASK3 };
-static const uint8_t ucGatewayAddress[ 4 ] = { configGATEWAY_ADDR0, configGATEWAY_ADDR1, configGATEWAY_ADDR2, configGATEWAY_ADDR3 };
-static const uint8_t ucDNSServerAddress[ 4 ] = { configDNS_SERVER_ADDR0, configDNS_SERVER_ADDR1, configDNS_SERVER_ADDR2, configDNS_SERVER_ADDR3 };
 
 uint32_t ulServerIPAddress;
 
@@ -248,54 +268,41 @@ the real network connection to use. */
 #if( ipconfigMULTI_INTERFACE == 0 )
 	const uint8_t ucMACAddress[ 6 ] = { configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2, configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5 };
 #else
-	static const uint8_t ucIPAddress2[ 4 ] = { 127, 0, 0, 1 };
-	static const uint8_t ucNetMask2[ 4 ] = { 255, 0, 0, 0 };
-	static const uint8_t ucGatewayAddress2[ 4 ] = { 0, 0, 0, 0};
-	static const uint8_t ucDNSServerAddress2[ 4 ] = { 0, 0, 0, 0 };
-
-	static const uint8_t ucMACAddress[ 6 ] = { configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2, configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5 };
-	static const uint8_t ucMACAddress2[ 6 ] = { configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2, configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5 + 1 };
+	static const uint8_t ucMACAddress1[ 6 ] = { configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2, configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5 };
 #endif /* ipconfigMULTI_INTERFACE */
-
-/* Use by the pseudo random number generator. */
-static UBaseType_t ulNextRand;
 
 /* Handle of the task that runs the FTP and HTTP servers. */
 static TaskHandle_t xServerWorkTaskHandle = NULL;
-static TaskHandle_t xTCPTaskHandle = NULL;
+static TaskHandle_t xFTPWorkTaskHandle = NULL;
+static void prvFTPTask (void *pvParameters );
 
 #if( ipconfigMULTI_INTERFACE != 0 )
-	NetworkInterface_t *pxSTMF40_FillInterfaceDescriptor( BaseType_t xEMACIndex, NetworkInterface_t *pxInterface );
+	NetworkInterface_t *pxSTM32Fxx_FillInterfaceDescriptor( BaseType_t xEMACIndex, NetworkInterface_t *pxInterface );
 	NetworkInterface_t *pxLoopback_FillInterfaceDescriptor( BaseType_t xEMACIndex, NetworkInterface_t *pxInterface );
 #endif /* ipconfigMULTI_INTERFACE */
 /*-----------------------------------------------------------*/
 
 #if( ipconfigMULTI_INTERFACE != 0 )
-NetworkInterface_t *pxSTMF40_IPInit(
-	BaseType_t xEMACIndex, NetworkInterface_t *pxInterface );
-#endif
+	static NetworkInterface_t xInterfaces[ 2 ];
+	static NetworkEndPoint_t xEndPoints[ 4 ];
+#endif /* ipconfigMULTI_INTERFACE */
 
 /* Prototypes for the standard FreeRTOS callback/hook functions implemented
 within this file. */
-void vApplicationMallocFailedHook( void );
-void vApplicationIdleHook( void );
-void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName );
-void vApplicationTickHook( void );
+EXTERN_C void vApplicationMallocFailedHook( void );
+EXTERN_C void vApplicationIdleHook( void );
+EXTERN_C void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName );
+EXTERN_C void vApplicationTickHook( void );
 
 /*-----------------------------------------------------------*/
 
+EXTERN_C int main( void );
 int main( void )
 {
-#if( ipconfigMULTI_INTERFACE != 0 )
-	static NetworkInterface_t xInterfaces[ 2 ];
-	static NetworkEndPoint_t xEndPoints[ 2 ];
-#endif /* ipconfigMULTI_INTERFACE */
-
 uint32_t ulSeed;
 
+	SCB_EnableICache();
 	SCB_EnableDCache();
-	/* Disable DCache for STM32F7 family */
-//	SCB_DisableDCache();
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
@@ -303,28 +310,16 @@ uint32_t ulSeed;
 	/* Configure the hardware ready to run the demo. */
 	prvSetupHardware();
 
-	heapInit( );
-
 	/* Timer2 initialization function.
 	ullGetHighResolutionTime() will be used to get the running time in uS. */
 	vStartHighResolutionTimer();
 
-//	hrng.Instance = RNG;
-//	HAL_RNG_Init( &hrng );
-//	HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed );
-//	prvSRand( ulSeed );
+	/* Initialise a heap in SRAM. */
+	heapInit( );
 
 #if USE_LOG_EVENT
 	iEventLogInit();
 #endif
-
-//	HAL_RNG_Init( &hrng );
-//
-//	hrng.Instance = RNG;
-//	if(HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed ) == HAL_OK )
-//	{
-//		prvSRand( ulSeed );
-//	}
 
 	{
 		/* Enable the clock for the RNG. */
@@ -339,14 +334,10 @@ uint32_t ulSeed;
 		/* Get a random number. */
 		HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed );
 		/* And pass it to the rand() function. */
-//		vSRand( ulSeed );
 	}
 
 	hrng.Instance = RNG;
 	HAL_RNG_Init( &hrng );
-	xRandom32( &ulSeed );
-	prvSRand( ulSeed );
-	ulInitialSeed = ulSeed;
 
 	/* Initialise the network interface.
 
@@ -357,49 +348,137 @@ uint32_t ulSeed;
 	but a DHCP server cannot be	contacted. */
 
 #if( ipconfigMULTI_INTERFACE == 0 )
-	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
+	/* Call it later in a task. */
+//	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
 #else
-	pxSTMF40_FillInterfaceDescriptor( 0, &( xInterfaces[ 0 ] ) );
-	pxLoopback_FillInterfaceDescriptor( 0, &( xInterfaces[ 1 ] ) );
+	pxSTM32Fxx_FillInterfaceDescriptor( 0, &( xInterfaces[ 0 ] ) );
 
-	FreeRTOS_FillEndPoint( &( xEndPoints[ 0 ] ), ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
-	FreeRTOS_FillEndPoint( &( xEndPoints[ 1 ] ), ucIPAddress2, ucNetMask2, ucGatewayAddress2, ucDNSServerAddress2, ucMACAddress2 );
+	/*
+	 * End-point-1  // private + public
+	 *     Network: 192.168.2.x/24
+	 *     IPv4   : 192.168.2.12
+	 *     Gateway: 192.168.2.1 ( NAT router )
+	 */
+	NetworkEndPoint_t *pxEndPoint_0 = &( xEndPoints[ 0 ] );
+	NetworkEndPoint_t *pxEndPoint_1 = &( xEndPoints[ 1 ] );
+	NetworkEndPoint_t *pxEndPoint_2 = &( xEndPoints[ 2 ] );
+//	NetworkEndPoint_t *7 = &( xEndPoints[ 3 ] );
+	{
+		const uint8_t ucIPAddress[ 4 ]        = { 192, 168,   2, 127 };
+		const uint8_t ucNetMask[ 4 ]          = { 255, 255, 255, 0   };
+		const uint8_t ucGatewayAddress[ 4 ]   = { 192, 168,   2,   1 };
+		const uint8_t ucDNSServerAddress[ 4 ] = { 118,  98,  44, 100 };
+
+		FreeRTOS_FillEndPoint( &( xInterfaces[0] ), pxEndPoint_0, ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress1 );
+		#if( ipconfigUSE_DHCP != 0 )
+		{
+			pxEndPoint_0->bits.bWantDHCP = pdTRUE;	//	pdTRUE;
+		}
+		#endif	/* ( ipconfigUSE_DHCP != 0 ) */
+	}
+#warning please include this end-point again.
+//	{
+//		const uint8_t ucIPAddress[]        = { 172,  16,   0, 114 };
+//		const uint8_t ucNetMask[]          = { 255, 255,   0,   0};
+//		const uint8_t ucGatewayAddress[]   = {   0,   0,   0,   0};
+//		const uint8_t ucDNSServerAddress[] = {   0,   0,   0,   0};
+//		FreeRTOS_FillEndPoint( &( xInterfaces[0] ), pxEndPoint_3, ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress1 );
+//	}
+
 
 	#if( ipconfigUSE_IPv6 != 0 )
 	{
-	BaseType_t xIndex;
-		//                                80fe       0       0       0    118d    9bcd    668b    784a
-		// 0000   ff 02 00 00 00 00 00 00 00 00 00 01 ff 66 4a 78  .............fJx
-//		unsigned short pusAddress[] = { 0xfe80, 0x0000, 0x0000, 0x0000, 0x8d11, 0xcd9b, 0x8b66, 0x4a78 };
-		// fe80::8d11:cd9b:8b66:4a80
-		unsigned short pusAddress[] = { 0xfe80, 0x0000, 0x0000, 0x0000, 0x8d11, 0xcd9b, 0x8b66, 0x4a80 };
-		for( xIndex = 0; xIndex < ARRAY_SIZE( pusAddress ); xIndex++ )
+		/*
+		 * End-point-2  // private
+		 *     Network: fe80::/10 (link-local)
+		 *     IPv6   : fe80::d80e:95cc:3154:b76a/128
+		 *     Gateway: -
+		*/
 		{
-			xEndPoints[ 0 ].ulIPAddress_IPv6.usShorts[ xIndex ] = FreeRTOS_htons( pusAddress[ xIndex ] );
+			IPv6_Address_t xIPAddress;
+			IPv6_Address_t xPrefix;
+			// a573:8::5000:0:d8ff:120
+			// a8ff:120::593b:200:d8af:20
+
+			FreeRTOS_inet_pton6( "fe80::", xPrefix.ucBytes );
+//			FreeRTOS_inet_pton6( "2001:470:ec54::", xPrefix.ucBytes );
+
+//			Take a random IP-address
+//			FreeRTOS_CreateIPv6Address( &xIPAddress, &xPrefix, 64, pdTRUE );
+
+//			Take a fixed IP-address, which is easier for testing.
+			//FreeRTOS_inet_pton6( "fe80::b865:6c00:6615:6e50", xIPAddress.ucBytes );
+			FreeRTOS_inet_pton6( "fe80::7007", xIPAddress.ucBytes );
+
+			FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[0] ), 
+										pxEndPoint_1,
+										&( xIPAddress ),
+										&( xPrefix ),
+										64uL,			/* Prefix length. */
+										NULL,			/* No gateway */
+										NULL,			/* pxDNSServerAddress: Not used yet. */
+										ucMACAddress1 );
 		}
-		xEndPoints[ 0 ].bits.bIPv6 = pdTRUE_UNSIGNED;
-	}
-	#endif /* ipconfigUSE_IPv6 */
-	FreeRTOS_AddEndPoint( &( xInterfaces[ 0 ] ), &( xEndPoints[ 0 ] ) );
-	FreeRTOS_AddEndPoint( &( xInterfaces[ 1 ] ), &( xEndPoints[ 1 ] ) );
+		/*
+		 * End-point-3  // public
+		 *     Network: 2001:470:ec54::/64
+		 *     IPv6   : 2001:470:ec54::4514:89d5:4589:8b79/128
+		 *     Gateway: fe80::9355:69c7:585a:afe7  // obtained from Router Advertisement
+		*/
+		{
+			IPv6_Address_t xIPAddress;
+			IPv6_Address_t xPrefix;
+			IPv6_Address_t xGateWay;
+			IPv6_Address_t xDNSServer;
 
-	/* You can modify fields: */
-	xEndPoints[ 0 ].bits.bIsDefault = pdTRUE;
-	xEndPoints[ 0 ].bits.bWantDHCP = pdFALSE;
+			FreeRTOS_inet_pton6( "2001:470:ec54::",           xPrefix.ucBytes );
+			FreeRTOS_inet_pton6( "2001:4860:4860::8888",      xDNSServer.ucBytes );			
 
-	FreeRTOS_IPStart();
-#endif /* ipconfigMULTI_INTERFACE */
+			FreeRTOS_CreateIPv6Address( &xIPAddress, &xPrefix, 64, pdTRUE );
+			FreeRTOS_inet_pton6( "fe80::9355:69c7:585a:afe7", xGateWay.ucBytes );
 
-	#if( ( mainCREATE_FTP_SERVER == 1 ) || ( mainCREATE_HTTP_SERVER == 1 ) )
-	{
-		/* Create the task that handles the FTP and HTTP servers.  This will
-		initialise the file system then wait for a notification from the network
-		event hook before creating the servers.  The task is created at the idle
-		priority, and sets itself to mainTCP_SERVER_TASK_PRIORITY after the file
-		system has initialised. */
-		xTaskCreate( prvServerWorkTask, "SvrWork", mainTCP_SERVER_STACK_SIZE, NULL, tskIDLE_PRIORITY, &xServerWorkTaskHandle );
+			FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[0] ), 
+										pxEndPoint_2,
+										&( xIPAddress ),
+										&( xPrefix ),
+										64uL,				/* Prefix length. */
+										&( xGateWay ),
+										&( xDNSServer ),	/* pxDNSServerAddress: Not used yet. */
+										ucMACAddress1 );
+			#if( ipconfigUSE_RA != 0 )
+			{
+				pxEndPoint_2->bits.bWantRA = pdTRUE_UNSIGNED;
+			}
+			#endif /* #if( ipconfigUSE_RA != 0 ) */
+			#if( ipconfigUSE_DHCPv6 != 0 )
+		{
+				pxEndPoint_2->bits.bWantDHCP = pdTRUE;
+			}
+			#endif	/* ( ipconfigUSE_DHCP != 0 ) */
+		}
 	}
 	#endif
+
+//	FreeRTOS_IPStart();
+#endif /* ipconfigMULTI_INTERFACE */
+
+#if( ipconfigMULTI_INTERFACE == 0 )
+	const uint8_t ucIPAddress[ 4 ]        = { 192, 168,   2, 127 };
+	const uint8_t ucNetMask[ 4 ]          = { 255, 255, 255,   0 };
+	const uint8_t ucGatewayAddress[ 4 ]   = { 192, 168,   2,   1 };
+	const uint8_t ucDNSServerAddress[ 4 ] = { 118,  98,  44, 100 };
+	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
+//	const uint8_t ucZeros[ 4 ] = { 0, 0, 0, 0 };
+//	FreeRTOS_IPInit( ucZeros, ucZeros, ucZeros, ucZeros, ucMACAddress );
+#else
+	FreeRTOS_IPStart();
+#endif
+	/* Create the task that handles the FTP and HTTP servers.  This will
+	initialise the file system then wait for a notification from the network
+	event hook before creating the servers.  The task is created at the idle
+	priority, and sets itself to mainTCP_SERVER_TASK_PRIORITY after the file
+	system has initialised. */
+	xTaskCreate( prvServerWorkTask, "SvrWork", mainTCP_SERVER_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &xServerWorkTaskHandle );
 
 	/* Start the RTOS scheduler. */
 	FreeRTOS_debug_printf( ("vTaskStartScheduler\n") );
@@ -456,30 +535,31 @@ uint32_t ulValue;
 	return xReturn;
 }
 
-BaseType_t xRandom32( uint32_t *pulValue )
-{
-	return xApplicationGetRandomNumber( pulValue );
-}
 static void prvCreateDiskAndExampleFiles( void )
 {
-#if( mainHAS_RAMDISK != 0 )
-	static uint8_t ucRAMDisk[ mainRAM_DISK_SECTORS * mainRAM_DISK_SECTOR_SIZE ];
-#endif
-
 	verboseLevel = 0;
 	#if( mainHAS_RAMDISK != 0 )
 	{
-		FreeRTOS_printf( ( "Create RAM-disk\n" ) );
-		/* Create the RAM disk. */
-		pxRAMDisk = FF_RAMDiskInit( mainRAM_DISK_NAME, ucRAMDisk, mainRAM_DISK_SECTORS, mainIO_MANAGER_CACHE_SIZE );
-		configASSERT( pxRAMDisk );
+		static uint8_t * pucRAMDiskSpace = NULL;
+		if( pucRAMDiskSpace == NULL )
+		{
+			#define mainRAM_DISK_SECTOR_SIZE	512U
+			pucRAMDiskSpace = ( uint8_t * ) malloc( mainRAM_DISK_SECTORS * mainRAM_DISK_SECTOR_SIZE );
+			if( pucRAMDiskSpace != NULL )
+			{
+				FreeRTOS_printf( ( "Create RAM-disk\n" ) );
+				/* Create the RAM disk. */
+				pxRAMDisk = FF_RAMDiskInit( ( char * ) mainRAM_DISK_NAME, pucRAMDiskSpace, mainRAM_DISK_SECTORS, mainIO_MANAGER_CACHE_SIZE );
+				configASSERT( pxRAMDisk );
 
-		/* Print out information on the RAM disk. */
-		FF_RAMDiskShowPartition( pxRAMDisk );
+				/* Print out information on the RAM disk. */
+				FF_RAMDiskShowPartition( pxRAMDisk );
+			}
+		}
 	}
 	#endif	/* mainHAS_RAMDISK */
 	#if( mainHAS_SDCARD != 0 )
-	{
+	if( pxSDDisk == NULL ) {
 		FreeRTOS_printf( ( "Mount SD-card\n" ) );
 		/* Create the SD card disk. */
 		pxSDDisk = FF_SDDiskInit( mainSD_CARD_DISK_NAME );
@@ -491,7 +571,7 @@ static void prvCreateDiskAndExampleFiles( void )
 			ff_deltree( mainSD_CARD_TESTING_DIRECTORY );
 
 			/* Make sure that the testing directory exists. */
-			ff_mkdir( mainSD_CARD_TESTING_DIRECTORY );
+			ff_mkdir( mainSD_CARD_TESTING_DIRECTORY MKDIR_RECURSE );
 
 			/* Create a few example files on the disk.  These are not deleted again. */
 			vCreateAndVerifyExampleFiles( mainSD_CARD_TESTING_DIRECTORY );
@@ -521,7 +601,7 @@ static void prvCreateDiskAndExampleFiles( void )
 		while( iFATRunning != 0 )
 		{
 			ff_deltree( pcBasePath );
-			ff_mkdir( pcBasePath );
+			ff_mkdir( pcBasePath MKDIR_RECURSE );
 			vCreateAndVerifyExampleFiles( pcBasePath );
 			vStdioWithCWDTest( pcBasePath );
 		}
@@ -529,15 +609,175 @@ static void prvCreateDiskAndExampleFiles( void )
 		vTaskDelete( NULL );
 	}
 
+#if( ipconfigUSE_DHCP_HOOK != 0 )
+	eDHCPCallbackAnswer_t xApplicationDHCPHook( eDHCPCallbackPhase_t eDHCPPhase, uint32_t ulIPAddress )
+	{
+	eDHCPCallbackAnswer_t eAnswer = eDHCPContinue;
+
+		const char *name = "Unknown";
+		switch( eDHCPPhase )
+		{
+		case eDHCPPhasePreDiscover:
+			{
+				name = "Discover";			/* Driver is about to send a DHCP discovery. */
+	//#warning Testing here
+	//			eAnswer = eDHCPUseDefaults;
+			}
+			break;
+		case eDHCPPhasePreRequest:
+			{
+				name = "Request";			/* Driver is about to request DHCP an IP address. */
+	//#warning Testing here
+	//			eAnswer = eDHCPUseDefaults;
+			}
+			break;
+		}
+		FreeRTOS_printf( ( "DHCP %s address %lxip\n", name, FreeRTOS_ntohl( ulIPAddress ) ) );
+		return eAnswer;
+	}
+#endif	/* ipconfigUSE_DHCP_HOOK */
+
 	void dnsCallback( const char *pcName, void *pvSearchID, uint32_t ulIPAddress)
 	{
-		FreeRTOS_printf( ( "DNS callback: %s with ID %04x found on %lxip\n", pcName, pvSearchID, FreeRTOS_ntohl( ulIPAddress ) ) );
+		FreeRTOS_printf( ( "DNS callback: %s with ID %4d found on %xip\n",
+			pcName,
+			( unsigned ) pvSearchID,
+			( unsigned ) FreeRTOS_ntohl( ulIPAddress ) ) );
 	}
+
+#if( ipconfigUSE_PCAP != 0 )
+	#include "win_pcap.h"
+
+	/* SPcap can gather Ethernet packets in RAM and write them to disk. */
+	SPcap myPCAP;
+	static BaseType_t pcapRunning = pdFALSE;
+	static char pcPCAPFname[ 80 ];
+	TickType_t xPCAPStartTime;
+	unsigned xPCAPMaxTime;
+	#define PCAP_SIZE    ( 1024U )
+
+	static void pcap_check( void )
+	{
+		if( pcapRunning )
+		{
+			TickType_t xNow = xTaskGetTickCount ();
+			TickType_t xDiff = ( xNow - xPCAPStartTime ) / configTICK_RATE_HZ;
+			BaseType_t xTimeIsUp = ( ( xPCAPMaxTime > 0U ) && ( xDiff > xPCAPMaxTime ) ) ? 1 : 0;
+			if( xPCAPStartTime == 1 )
+			{
+				xTimeIsUp = 1;
+			}
+			if( xTimeIsUp != 0 )
+			{
+				FreeRTOS_printf( ( "PCAP time is up\n" ) );
+			}
+			if( ( xTimeIsUp != 0 ) || ( pcap_has_space( &( myPCAP ) ) < 2048 ) )
+			{
+				pcap_toFile( &( myPCAP ), pcPCAPFname );
+				pcap_clear( &( myPCAP ) );
+				pcapRunning = pdFALSE;
+				FreeRTOS_printf( ( "PCAP ready with '%s'\n", pcPCAPFname ) );
+			}
+		}
+	}
+
+	void pcap_store( uint8_t * pucBytes, size_t uxLength )
+	{
+		if( pcapRunning )
+		{
+			IPPacket_t * pxIPPacket = ( IPPacket_t * ) pucBytes;
+			IPHeader_t * pxIPHeader = &( pxIPPacket->xIPHeader );
+			uint8_t ucProtocol = pxIPPacket->xIPHeader.ucProtocol;
+			if( pxIPPacket->xIPHeader.ulSourceIPAddress == FreeRTOS_GetIPAddress())
+			{
+				switch( ucProtocol )
+				{
+				case ipPROTOCOL_ICMP:
+				case ipPROTOCOL_UDP:
+				case ipPROTOCOL_TCP:
+                    pxIPHeader->usHeaderChecksum = 0x00U;
+                    pxIPHeader->usHeaderChecksum = usGenerateChecksum( 0U, ( uint8_t * ) &( pxIPHeader->ucVersionHeaderLength ), ipSIZE_OF_IPv4_HEADER );
+                    pxIPHeader->usHeaderChecksum = ~FreeRTOS_htons( pxIPHeader->usHeaderChecksum );
+
+					usGenerateProtocolChecksum( pucBytes, uxLength, pdTRUE );
+					break;
+				}
+			}
+			pcap_write( &myPCAP, pucBytes, ( int ) uxLength );
+		}
+	}
+
+	static void pcap_command( char *pcBuffer )
+	{
+		char *ptr = pcBuffer;
+		while( isspace( *ptr ) ) ptr++;
+		if( *ptr == 0 )
+		{
+			FreeRTOS_printf( ( "Usage: pcap /test.pcap 1024 100\n" ) );
+			FreeRTOS_printf( ( "Which records 1024 KB\n" ) );
+			FreeRTOS_printf( ( "Lasting at most 100 seconds\n" ) );
+			return;
+		}
+		if( strncmp( ptr, "stop", 4 )  == 0 )
+		{
+			if( pcapRunning )
+			{
+				FreeRTOS_printf( ( "Trying to stop PCAP\n" ) );
+				xPCAPStartTime = 1U;
+				pcap_check();
+			}
+			else
+			{
+				FreeRTOS_printf( ( "PCAP was not running\n" ) );
+			}
+		}
+		else if( pcapRunning )
+		{
+			FreeRTOS_printf( ( "PCAP is still running\n" ) );
+		}
+		else
+		{
+			xPCAPMaxTime = 0U;
+			const char *fname = ptr;
+			unsigned length = PCAP_SIZE;
+			while( *ptr && !isspace( *ptr ) )
+			{
+				ptr++;
+			}
+			while( isspace( *ptr ) )
+			{
+				*ptr = 0;
+				ptr++;
+			}
+			if( isdigit( *ptr ) )
+			{
+				if( sscanf( ptr, "%u", &length) > 0 )
+				{
+					while( *ptr && !isspace( *ptr ) )
+					{
+						ptr++;
+					}
+					while( isspace( *ptr ) ) ptr++;
+					sscanf( ptr, "%u", &xPCAPMaxTime);
+				}
+			}
+			snprintf(pcPCAPFname, sizeof pcPCAPFname, "%s", fname);
+
+			if( pcap_init( &( myPCAP ), length * 1024U ) == pdTRUE )
+			{
+				xPCAPStartTime = xTaskGetTickCount ();
+				pcapRunning = pdTRUE;
+				FreeRTOS_printf( ( "PCAP recording %u KB to '%s' for %u sec\n",
+					length * 1024U, pcPCAPFname, xPCAPMaxTime ) );
+			}
+		}
+	}
+
+#endif
 
 	static void prvServerWorkTask( void *pvParameters )
 	{
-	const TickType_t xInitialBlockTime = pdMS_TO_TICKS( 200UL );
-	BaseType_t xWasPresent, xIsPresent;
+	const TickType_t xInitialBlockTime = pdMS_TO_TICKS( 10UL );
 
 	/* A structure that defines the servers to be created.  Which servers are
 	included in the structure depends on the mainCREATE_HTTP_SERVER and
@@ -569,18 +809,8 @@ static void prvCreateDiskAndExampleFiles( void )
 
 		/* Create the disk used by the FTP and HTTP servers. */
 		prvCreateDiskAndExampleFiles();
-		xIsPresent = xWasPresent = FF_SDDiskDetect( pxSDDisk );
-		FreeRTOS_printf( ( "FF_SDDiskDetect returns -> %ld\n", xIsPresent  ) );
-
-		/* If the CLI is included in the build then register commands that allow
-		the file system to be accessed. */
-		#if( mainCREATE_UDP_CLI_TASKS == 1 )
-		{
-			vRegisterFileSystemCLICommands();
-		}
-		#endif /* mainCREATE_UDP_CLI_TASKS */
-
-
+		BaseType_t xIsPresent = FF_SDDiskDetect( pxSDDisk );
+		FreeRTOS_printf( ( "FF_SDDiskDetect returns -> %d\n", ( int ) xIsPresent  ) );
 
 		/* The priority of this task can be raised now the disk has been
 		initialised. */
@@ -596,62 +826,25 @@ static void prvCreateDiskAndExampleFiles( void )
 
 		#if( CONFIG_USE_LWIP != 0 )
 		{
+			/* Earlier testing with a dual-stack. */
 			vLWIP_Init();
 		}
 		#endif
 		xServerSemaphore = xSemaphoreCreateBinary();
+		char pcBuffer[ 64 ];
 
 		for( ;; )
 		{
+			if (xStartServices == EStartupStart) {
+				xStartServices = EStartupStarted;
+				strcpy( pcBuffer, "ntp" );
+				xHandleTestingCommand( pcBuffer, sizeof pcBuffer );
+				xTaskCreate( prvFTPTask, "FTP-task", mainFAT_SERVER_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &xFTPWorkTaskHandle );
+			}
+			/* tcpServerWork() is yet another test. */
 			tcpServerWork();
-			if( pxSDDisk != NULL )
-			{
-				xIsPresent = FF_SDDiskDetect( pxSDDisk );
-				if (xWasPresent != xIsPresent )
-				{
-					if( xIsPresent == pdFALSE )
-					{
-						FreeRTOS_printf( ( "SD-card now removed (%ld -> %ld)\n", xWasPresent, xIsPresent ) );
-						if( ( pxSDDisk != NULL ) && ( pxSDDisk->pxIOManager != NULL ) )
-						{
-							/* Invalidate all open file handles so they
-							will get closed by the application. */
-							FF_Invalidate( pxSDDisk->pxIOManager );
-							FF_SDDiskUnmount( pxSDDisk );
-						}
-					}
-					else
-					{
-						FreeRTOS_printf( ( "SD-card now present (%ld -> %ld)\n", xWasPresent, xIsPresent ) );
-						if( pxSDDisk != NULL )
-						{
-						BaseType_t xResult;
-							FF_SDDiskReinit( pxSDDisk );
-							xResult = FF_SDDiskMount( pxSDDisk );
-							FF_PRINTF( "FF_SDDiskMount: SD-card %s\n", xResult > 0 ? "OK" : "Failed" );
-							if( xResult > 0 )
-							{
-								FF_SDDiskShowPartition( pxSDDisk );
-							}
-						}
-						else
-						{
-							prvCreateDiskAndExampleFiles();
-						}
-					}
-					xWasPresent = xIsPresent;
-				}
-				else
-				{
-	//				FreeRTOS_printf( ( "SD-card still %d\n", xIsPresent ) );
-				}
-				FreeRTOS_TCPServerWork( pxTCPServer, xInitialBlockTime );
-				xHasBlocked = pdTRUE;
-			}
-			else
-			{
-				xHasBlocked = pdFALSE;
-			}
+
+			xHasBlocked = pdFALSE;
 
 			#if( configUSE_TIMERS == 0 )
 			{
@@ -664,15 +857,28 @@ static void prvCreateDiskAndExampleFiles( void )
 			struct freertos_sockaddr xSourceAddress;
 			socklen_t xSourceAddressLength = sizeof( xSourceAddress );
 
-			xSemaphoreTake( xServerSemaphore, 10 );
+			if( !xHasBlocked )
+			{
+				xSemaphoreTake( xServerSemaphore, 10 );
+			}
 
 			if( xSocket != NULL)
 			{
-			char cBuffer[ 64 ];
 			BaseType_t xCount;
 
 			TickType_t xReceiveTimeOut = pdMS_TO_TICKS( 0 );
 
+				#if( ipconfigUSE_PCAP != 0 )
+				{
+					pcap_check();
+				}
+				#endif
+
+				#if( USE_TCP_DEMO_CLI != 0 )
+				{
+					xHandleTesting();
+				}
+				#endif
 				if( xHadSocket == pdFALSE )
 				{
 					xHadSocket = pdTRUE;
@@ -682,193 +888,37 @@ static void prvCreateDiskAndExampleFiles( void )
 
 					FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_RCVTIMEO, &xReceiveTimeOut, sizeof( xReceiveTimeOut ) );
 				}
-//				xCount = FreeRTOS_recvfrom( xSocket, ( void * )cBuffer, sizeof( cBuffer ) - 1,
+//				xCount = FreeRTOS_recvfrom( xSocket, ( void * )pcBuffer, sizeof( pcBuffer ) - 1,
 //						xHasBlocked ? 0 : FREERTOS_MSG_DONTWAIT, &xSourceAddress, &xSourceAddressLength );
-				xCount = FreeRTOS_recvfrom( xSocket, ( void * )cBuffer, sizeof( cBuffer ) - 1,
+				xCount = FreeRTOS_recvfrom( xSocket, ( void * )pcBuffer, sizeof( pcBuffer ) - 1,
 						0, &xSourceAddress, &xSourceAddressLength );
 				if( xCount > 0 )
 				{
-					cBuffer[ xCount ] = '\0';
-					FreeRTOS_printf( ( ">> %s\n", cBuffer ) );
-					if( strncmp( cBuffer, "ver", 3 ) == 0 )
-					{
-					int level;
-					TickType_t xCount = xTaskGetTickCount();
-						if( sscanf( cBuffer + 3, "%d", &level ) == 1 )
-						{
-							verboseLevel = level;
-						}
-						FreeRTOS_printf( ( "Verbose level %d time %lu\n", verboseLevel, xCount ) );
-					}
-					if( strncmp( cBuffer, "tcptest", 7 ) == 0 )
-					{
-						tcpServerStart();
+					pcBuffer[ xCount ] = '\0';
+					if (pcBuffer[0] == 'f' && isdigit (pcBuffer[1]) && pcBuffer[2] == ' ') {
+						// Ignore messages like "f4 dnsq"
+						if (pcBuffer[1] != '7')
+							continue;
+						xCount -= 3;
+						// "f7 ver"
+						memmove(pcBuffer, pcBuffer+3, xCount + 1);
 					}
 
-					if( strncmp( cBuffer, "ping", 4 ) == 0 )
+					#if( USE_TCP_DEMO_CLI != 0 )
+					if( xHandleTestingCommand( pcBuffer, sizeof( pcBuffer ) ) == pdTRUE )
 					{
-						uint32_t ulIPAddress;
-						char *ptr = cBuffer + 4;
-//						ulIPAddress = FreeRTOS_inet_addr_quick( 127, 0, 0, 1 );
-						#if( ipconfigMULTI_INTERFACE != 0 )
-						{
-							ulIPAddress = FreeRTOS_inet_addr_quick( ucIPAddress[0], ucIPAddress[1], ucIPAddress[2], ucIPAddress[3] );
-						}
-						#else
-						{
-							FreeRTOS_GetAddressConfiguration( &ulIPAddress, NULL, NULL, NULL );
-						}
-						#endif
-
-						while (isspace(*ptr)) ptr++;
-						if (*ptr) {
-							ulIPAddress = FreeRTOS_inet_addr( ptr );
-						}
-						FreeRTOS_printf( ( "ping to %xip\n", FreeRTOS_htonl(ulIPAddress) ) );
-						FreeRTOS_SendPingRequest( ulIPAddress, 10, 10 );
+						/* Command has been handled. */
 					}
-					else if( ( strncmp( cBuffer, "memstat", 7 ) == 0 ) || ( strncmp( cBuffer, "mem_stat", 8 ) == 0 ) )
+					else
+					#endif /* ( USE_TCP_DEMO_CLI != 0 ) */
+					if( vHandleOtherCommand( xSocket, pcBuffer ) == pdTRUE )
 					{
-				#if( ipconfigUSE_TCP_MEM_STATS != 0 )
-						FreeRTOS_printf( ( "Closing mem_stat\n" ) );
-						iptraceMEM_STATS_CLOSE();
-				#else
-						FreeRTOS_printf( ( "ipconfigUSE_TCP_MEM_STATS was not defined\n" ) );
-				#endif	/* ( ipconfigUSE_TCP_MEM_STATS != 0 ) */
+						/* Command has been handled locally. */
 					}
-					else if( strncmp( cBuffer, "plus", 4 ) == 0 )
+					else
 					{
-						int value = 1;
-						char *ptr = cBuffer+4;
-						while (*ptr && !isdigit(*ptr)) ptr++;
-						if (!ulServerIPAddress)
-							ulServerIPAddress = FreeRTOS_inet_addr_quick( ucIPAddress[0], ucIPAddress[1], ucIPAddress[2], ucIPAddress[3] );
-						if (*ptr) {
-							int value2;
-							char ch;
-							int rc = sscanf (ptr, "%d%c%d", &value, &ch, &value2);
-							if (rc >= 3) {
-								ulServerIPAddress = FreeRTOS_inet_addr( ptr );
-								value = 1;
-							} else if (rc < 1) {
-								value = 0;
-							}
-						}
-						plus_echo_start (value);
-						FreeRTOS_printf( ( "Plus testing has %s for %xip\n", value ? "started" : "stopped", ulServerIPAddress ) );
+						FreeRTOS_printf( ( "Unknown command: '%s'\n", pcBuffer ) );
 					}
-					if( strncmp( cBuffer, "realloc", 7 ) == 0 )
-					{
-						realloc_test();
-					}
-					if( strncmp( cBuffer, "netstat", 7 ) == 0 )
-					{
-						FreeRTOS_netstat();
-					}
-					if( strncmp( cBuffer, "crashnow", 8 ) == 0 )
-					{
-						zero_divisor = 0xF0937531;
-						FreeRTOS_printf( ( "Divide by zero = %d\n", *((unsigned*)zero_divisor) ) );
-					}
-					#if( USE_LOG_EVENT != 0 )
-					{
-						if( strncmp( cBuffer, "event", 4 ) == 0 )
-						{
-							eventLogDump();
-						}
-					}
-					#endif /* USE_LOG_EVENT */
-					if( strncmp( cBuffer, "list", 4 ) == 0 )
-					{
-						vShowTaskTable( cBuffer[ 4 ] == 'c' );
-					}
-///					if( strncmp( cBuffer, "phytest", 7 ) == 0 )
-///					{
-///						extern void phy_test();
-///						phy_test();
-///					}
-					#if( mainHAS_RAMDISK != 0 )
-					{
-						if( strncmp( cBuffer, "dump", 4 ) == 0 )
-						{
-							FF_RAMDiskStoreImage( pxRAMDisk, "ram_disk.img" );
-						}
-					}
-					#endif	/* mainHAS_RAMDISK */
-					#if( USE_IPERF != 0 )
-					{
-						if( strncmp( cBuffer, "iperf", 5 ) == 0 )
-						{
-							vIPerfInstall();
-						}
-					}
-					#endif	/* USE_IPERF */
-					if( strncmp( cBuffer, "dns", 3 ) == 0 )
-					{
-						char *ptr = cBuffer + 3;
-						while (isspace (*ptr)) ptr++;
-						if (*ptr) {
-							static uint32_t ulSearchID = 0x0000;
-							ulSearchID++;
-							FreeRTOS_printf( ( "Looking up '%s'\n", ptr ) );
-//							uint32_t ulIPAddress = FreeRTOS_gethostbyname_a( ptr );
-//							FreeRTOS_printf( ( "Address = %lxip\n", FreeRTOS_ntohl( ulIPAddress ) ) );
-							FreeRTOS_gethostbyname_a( ptr, dnsCallback, (void *)ulSearchID, 5000 );
-						}
-					}
-					if( strncmp( cBuffer, "format", 7 ) == 0 )
-					{
-						if( pxSDDisk != 0 )
-						{
-							FF_SDDiskFormat( pxSDDisk, 0 );
-						}
-					}
-					#if( mainHAS_FAT_TEST != 0 )
-					{
-						if( strncmp( cBuffer, "fattest", 7 ) == 0 )
-						{
-						int level = 0;
-						const char pcMountPath[] = "/test";
-
-							if( sscanf( cBuffer + 7, "%d", &level ) == 1 )
-							{
-								verboseLevel = level;
-							}
-							FreeRTOS_printf( ( "FAT test %d\n", level ) );
-							ff_mkdir( pcMountPath );
-							if( ( level != 0 ) && ( iFATRunning == 0 ) )
-							{
-							int x;
-
-								iFATRunning = 1;
-								if( level < 1 ) level = 1;
-								if( level > 10 ) level = 10;
-								for( x = 0; x < level; x++ )
-								{
-								char pcName[ 16 ];
-								static char pcBaseDirectoryNames[ 10 ][ 16 ];
-								sprintf( pcName, "FAT_%02d", x + 1 );
-								snprintf( pcBaseDirectoryNames[ x ], sizeof pcBaseDirectoryNames[ x ], "%s/%d",
-										pcMountPath, x + 1 );
-								ff_mkdir( pcBaseDirectoryNames[ x ] );
-
-#define mainFAT_TEST__TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
-									xTaskCreate( prvFileSystemAccessTask,
-												 pcName,
-												 mainFAT_TEST_STACK_SIZE,
-												 ( void * ) pcBaseDirectoryNames[ x ],
-												 mainFAT_TEST__TASK_PRIORITY,
-												 NULL );
-								}
-							}
-							else if( ( level == 0 ) && ( iFATRunning != 0 ) )
-							{
-								iFATRunning = 0;
-								FreeRTOS_printf( ( "FAT test stopped\n" ) );
-							}
-						}	/* if( strncmp( cBuffer, "fattest", 7 ) == 0 ) */
-					}
-					#endif /* mainHAS_FAT_TEST */
 				}	/* if( xCount > 0 ) */
 			}	/* if( xSocket != NULL) */
 		}
@@ -876,6 +926,411 @@ static void prvCreateDiskAndExampleFiles( void )
 
 #endif /* ( ( mainCREATE_FTP_SERVER == 1 ) || ( mainCREATE_HTTP_SERVER == 1 ) ) */
 /*-----------------------------------------------------------*/
+
+static void check_disk_presence()
+{
+    /* Check if the SD-card was inserted or extracted. */
+	static BaseType_t xWasPresent = pdFALSE;
+	BaseType_t xIsPresent = FF_SDDiskDetect( pxSDDisk );
+	if (xWasPresent != xIsPresent )
+	{
+		if( xIsPresent == pdFALSE )
+		{
+			FreeRTOS_printf( ( "SD-card now removed (%ld -> %ld)\n", xWasPresent, xIsPresent ) );
+			if( ( pxSDDisk != NULL ) && ( pxSDDisk->pxIOManager != NULL ) )
+			{
+				/* Invalidate all open file handles so they
+				will get closed by the application. */
+				FF_Invalidate( pxSDDisk->pxIOManager );
+				FF_SDDiskUnmount( pxSDDisk );
+			}
+		}
+		else
+		{
+			FreeRTOS_printf( ( "SD-card now present (%ld -> %ld)\n", xWasPresent, xIsPresent ) );
+			if( pxSDDisk != NULL )
+			{
+			BaseType_t xResult;
+				FF_SDDiskReinit( pxSDDisk );
+				xResult = FF_SDDiskMount( pxSDDisk );
+				FF_PRINTF( "FF_SDDiskMount: SD-card %s\n", xResult > 0 ? "OK" : "Failed" );
+//				if( xResult > 0 )
+//				{
+//					FF_SDDiskShowPartition( pxSDDisk );
+//				}
+			}
+			else
+			{
+				prvCreateDiskAndExampleFiles();
+			}
+		}
+		xWasPresent = xIsPresent;
+	}
+}
+
+typedef struct xParameters
+{
+	int parameters[16];
+	const char * texts[16];
+	int txtCount;
+	int parCount;
+	int ipCount;
+} SParameters;
+
+static int analyseCommand(SParameters *apPars, char *pcBuffer)
+{
+	const char *ptr = pcBuffer;
+	apPars->txtCount = 0;
+	apPars->parCount = 0;
+	apPars->ipCount = 0;
+
+	memset(apPars->parameters, '\0', sizeof apPars->parameters);
+	memset(apPars->texts, '\0', sizeof apPars->texts);
+
+	while (*ptr && !isdigit (*ptr) && *ptr != '-') ptr++;
+
+	while (apPars->parCount < ARRAY_SIZE(apPars->parameters))
+	{
+		char isHex = pdFALSE;
+		char negative = pdFALSE;
+		while (*ptr) {
+			if (ptr[0] == '0' && ptr[1] == 'x' && isxdigit (ptr[2])) {
+				ptr += 2;
+				isHex = pdTRUE;
+				break;
+			}
+			if (ptr[0] == '-' && isdigit (ptr[1])) {
+				ptr += 1;
+				negative = pdTRUE;
+				break;
+			}
+			if (isdigit (*ptr))
+				break;
+			ptr++;
+		}
+		if (!*ptr)
+			break;
+		if (isHex) {
+			sscanf (ptr, "%x", &apPars->parameters[apPars->parCount]);
+			while (isxdigit (*ptr)) ptr++;
+		} else {
+			unsigned n;
+			sscanf (ptr, "%u", &n);
+			if (apPars->ipCount) {
+				*((unsigned*)apPars->parameters+apPars->parCount) =
+					(((unsigned)apPars->parameters[apPars->parCount]) << 8) | n;
+			} else if (negative) {
+				apPars->parameters[apPars->parCount] = - ((int)n);
+			} else {
+				apPars->parameters[apPars->parCount] = n;
+			}
+			while (isdigit (*ptr)) ptr++;
+			if (*ptr == '.') {
+				apPars->parCount--;
+				apPars->ipCount++;
+			} else {
+				apPars->ipCount = 0;
+			}
+		}
+		apPars->parCount++;
+	}
+
+	for (char *token = strtok(pcBuffer, " ");
+		 token != NULL;
+		 token = strtok(NULL, " ")) {
+
+		apPars->texts[apPars->txtCount++] = token;
+		if (apPars->txtCount >= ARRAY_SIZE(apPars->texts))
+			break;
+	}
+	while (apPars->txtCount < ARRAY_SIZE(apPars->texts)) {
+		static const char zeroString[1] = { 0 };
+		apPars->texts[apPars->txtCount++] = zeroString;
+	}
+	return apPars->parCount;
+}
+
+static BaseType_t vHandleOtherCommand( Socket_t xSocket, char *pcBuffer )
+{
+	/* Assume that the command will be handled. */
+    BaseType_t xReturn = pdTRUE;
+
+	( void ) xSocket;
+
+	SParameters pars;
+	analyseCommand(&pars, pcBuffer);
+
+	if( strncmp( pcBuffer, "ver", 3 ) == 0 )
+	{
+	int level;
+	TickType_t xCount = xTaskGetTickCount();
+		if( sscanf( pcBuffer + 3, "%d", &level ) == 1 )
+		{
+			verboseLevel = level;
+		}
+		FreeRTOS_printf( ( "Verbose level %d time %lu\n", verboseLevel, xCount ) );
+	}
+#if( HAS_AUDIO != 0 )
+	else if( strncmp( pcBuffer, "audio", 5 ) == 0 )
+	{
+		static TaskHandle_t xTaskHandle = NULL;
+		extern unsigned audioTick;
+		if (xTaskHandle == NULL)
+		{
+			void audioTask (void * pvParameter);
+			xTaskCreate( audioTask, "AudioTask", 2048, NULL, tskIDLE_PRIORITY + 1, &xTaskHandle );
+			logPrintf("Audio task %sstarted\n", (xTaskHandle == NULL) ? "not " : "");
+		}
+		unsigned seconds = 10;
+		const char *command = pars.txtCount >= 2 ? pars.texts[1] : "test";
+		const char *fname   = pars.txtCount >= 3 ? pars.texts[2] : "/temp/file_01.wav";
+		const char *secs    = pars.txtCount >= 4 ? pars.texts[3] : "10";
+		sscanf (secs, "%u", &seconds);
+		if( strncmp( command, "record", 6 ) == 0 )
+		{
+			audioRecord (fname, seconds);
+			logPrintf("Record to %s for %u secs\n", fname, seconds);
+		}
+		else if( strncmp( command, "play", 6 ) == 0 )
+		{
+			audioPlay (fname, seconds);
+			logPrintf("Play from %s for %u secs\n", fname, seconds);
+		}
+		else if( strncmp( command, "test", 4 ) == 0 )
+		{
+			audioTick++;
+		}
+	}
+#endif
+	else if( memcmp( pcBuffer, "mem", 3 ) == 0 )
+	{
+		uint32_t now = xPortGetFreeHeapSize();
+		uint32_t total = 0; /*xPortGetOrigHeapSize( ); */
+		uint32_t perc = total ? ( ( 100 * now ) / total ) : 100;
+		FreeRTOS_printf( ( "mem Low %u, Current %lu / %lu (%lu perc free)\n",
+						   xPortGetMinimumEverFreeHeapSize(),
+						   now, total, perc ) );
+	}
+	else if( memcmp( pcBuffer, "pars", 4 ) == 0 )
+	{
+		logPrintf("pars[%d] '%d' '%d' '%d' '%d'\n",
+			pars.parCount,
+			pars.parameters[0],
+			pars.parameters[1],
+			pars.parameters[2],
+			pars.parameters[3]);
+		logPrintf("texts[%d] '%s' '%s' '%s' '%s'\n",
+			pars.txtCount,
+			pars.texts[0],
+			pars.texts[1],
+			pars.texts[2],
+			pars.texts[3]);
+	}
+#if( ipconfigUSE_IPv6 != 0 )
+	else if( strncmp( pcBuffer, "sizes", 5 ) == 0 )
+	{
+		FreeRTOS_printf( ( "ipconfigNETWORK_MTU %u IPv6_HEADER %u IPv4_HEADER %u ipSIZE_OF_TCP_HEADER %u\n",
+			( unsigned ) ipconfigNETWORK_MTU,
+			( unsigned ) ipSIZE_OF_IPv6_HEADER,
+			( unsigned ) ipSIZE_OF_IPv4_HEADER,
+			( unsigned ) ipSIZE_OF_TCP_HEADER ) );
+		#define ipconfigTCP_MSS_6	   ( ipconfigNETWORK_MTU - ( ipSIZE_OF_IPv6_HEADER + ipSIZE_OF_TCP_HEADER ) )
+		#define ipconfigTCP_MSS_4	   ( ipconfigNETWORK_MTU - ( ipSIZE_OF_IPv4_HEADER + ipSIZE_OF_TCP_HEADER ) )
+		FreeRTOS_printf( ( "ipconfigTCP_MSS = %u and %u\n", ipconfigTCP_MSS_4, ipconfigTCP_MSS_6 ) );
+	}
+#endif
+	else if( strncmp( pcBuffer, "tcptest", 7 ) == 0 )
+	{
+		tcpServerStart();
+	}
+#if( USE_MBEDTLS != 0 )
+	else if( strncmp( pcBuffer, "ssltest", 7 ) == 0 )
+	{
+		extern int ssl_main( int argc, char *argv[] );
+		char * argv[] =
+		{
+			"ssl_main",
+			"server_port=443",
+			"request_page=/",
+			"ca_path=/etc/certs",
+			"server_name=google.com",
+			"dtls=0",
+		};
+		ssl_main( ARRAY_SIZE( argv ), argv );
+	}
+#endif
+	else if( ( strncmp( pcBuffer, "memstat", 7 ) == 0 ) || ( strncmp( pcBuffer, "mem_stat", 8 ) == 0 ) )
+	{
+#if( ipconfigUSE_TCP_MEM_STATS != 0 )
+		FreeRTOS_printf( ( "Closing mem_stat\n" ) );
+		iptraceMEM_STATS_CLOSE();
+#else
+		FreeRTOS_printf( ( "ipconfigUSE_TCP_MEM_STATS was not defined\n" ) );
+#endif	/* ( ipconfigUSE_TCP_MEM_STATS != 0 ) */
+	}
+//	else if( strncmp( pcBuffer, "mymalloc", 8 ) == 0 )
+//	{
+//		uint8_t * mem = ( uint8_t * ) myMalloc( 64, pdFALSE );
+//		if( mem )
+//		{
+//			free( mem );
+//		}
+//		logPrintf( "maMalloc = %p\n", mem );
+//	}
+	else if( strncmp( pcBuffer, "time", 4 ) == 0 )
+	{
+		time_t currentTime;
+		extern time_t time ( time_t *puxTime );
+
+		time( &( currentTime ) );
+		FreeRTOS_printf( ( "Current time %u TickCount %u HR-time %u\n",
+			( unsigned ) currentTime,
+			( unsigned ) xTaskGetTickCount(),
+			( unsigned ) ullGetHighResolutionTime() ) );
+	}
+#if( HAS_ECHO_TEST != 0 )
+	else if( strncmp( pcBuffer, "plus abort", 10 ) == 0 )
+	{
+		FreeRTOS_printf( ( "Change uxServerAbort from %d\n", uxServerAbort ) );
+		uxServerAbort = pdTRUE;
+	}
+	else if( strncmp( pcBuffer, "plus", 4 ) == 0 )
+	{
+		int iDoStart = 1;
+		char *ptr = pcBuffer+4;
+		while (*ptr && !isdigit(*ptr)) ptr++;
+		if (!ulServerIPAddress)
+			ulServerIPAddress = FreeRTOS_GetIPAddress();
+		if (*ptr) {
+			int value2;
+			char ch;
+			char *tail = ptr;
+			int rc = sscanf (ptr, "%d%c%d", &iDoStart, &ch, &value2);
+
+			while( *tail && !isspace( *tail ) ) tail++;
+			if( isspace( *tail ) )
+			{
+				*(tail++) = 0;
+				while( isspace( *tail ) ) tail++;
+			}
+
+			if (rc >= 3) {
+				ulServerIPAddress = FreeRTOS_inet_addr( ptr );
+				iDoStart = 1;
+			} else if (rc < 1) {
+				iDoStart = 0;
+			}
+			if( *tail )
+			{
+				unsigned uValue;
+				if( sscanf( tail, "%u", &uValue) >= 1 )
+				{
+					FreeRTOS_printf( ( "Exchange %u bytes\n", uValue ) );
+					uxClientSendCount = uValue;
+				}
+			}
+		}
+		plus_echo_start (iDoStart);
+		FreeRTOS_printf( ( "Plus testing has %s for %xip\n", iDoStart ? "started" : "stopped",
+			( unsigned ) FreeRTOS_ntohl( ulServerIPAddress ) ) );
+	}
+#endif /* ( HAS_ECHO_TEST != 0 ) */
+	else if( strncmp( pcBuffer, "netstat", 7 ) == 0 )
+	{
+		FreeRTOS_netstat();
+	}
+#if( ipconfigUSE_PCAP != 0 )
+    else if( strncmp( pcBuffer, "pcap", 4 ) == 0 )
+	{
+		FreeRTOS_printf( ( "PCAP: %s\n", pcBuffer ) );
+		pcap_command( pcBuffer + 4 );
+	}
+#endif
+	#if( USE_LOG_EVENT != 0 )
+	else if( strncmp( pcBuffer, "event", 4 ) == 0 )
+	{
+		eventLogDump();
+	}
+	#endif /* USE_LOG_EVENT */
+	else if( strncmp( pcBuffer, "list", 4 ) == 0 )
+	{
+		vShowTaskTable( pcBuffer[ 4 ] == 'c' );
+	}
+//	if( strncmp( pcBuffer, "phytest", 7 ) == 0 )
+//	{
+//		extern void phy_test();
+//		phy_test();
+//	}
+	#if( mainHAS_RAMDISK != 0 )
+//	else if( strncmp( pcBuffer, "dump", 4 ) == 0 )
+//	{
+//		FF_RAMDiskStoreImage( pxRAMDisk, "ram_disk.img" );
+//	}
+	#endif	/* mainHAS_RAMDISK */
+	#if( USE_IPERF != 0 )
+	else if( strncmp( pcBuffer, "iperf", 5 ) == 0 )
+	{
+		vIPerfInstall();
+	}
+	#endif	/* USE_IPERF */
+	else if( strncmp( pcBuffer, "format", 6 ) == 0 )
+	{
+		if( pxSDDisk != 0 )
+		{
+			FF_SDDiskFormat( pxSDDisk, 0 );
+		}
+	}
+	#if( mainHAS_FAT_TEST != 0 )
+	else if( strncmp( pcBuffer, "fattest", 7 ) == 0 )
+	{
+	int level = 0;
+	const char pcMountPath[] = "/test";
+
+		if( sscanf( pcBuffer + 7, "%d", &level ) == 1 )
+		{
+			verboseLevel = level;
+		}
+		FreeRTOS_printf( ( "FAT test %d\n", level ) );
+		ff_mkdir( pcMountPath MKDIR_RECURSE );
+		if( ( level != 0 ) && ( iFATRunning == 0 ) )
+		{
+		int x;
+
+			iFATRunning = 1;
+			if( level < 1 ) level = 1;
+			if( level > 10 ) level = 10;
+			for( x = 0; x < level; x++ )
+			{
+			char pcName[ 16 ];
+			static char pcBaseDirectoryNames[ 10 ][ 16 ];
+			sprintf( pcName, "FAT_%02d", x + 1 );
+			snprintf( pcBaseDirectoryNames[ x ], sizeof pcBaseDirectoryNames[ x ], "%s/%d",
+					pcMountPath, x + 1 );
+			ff_mkdir( pcBaseDirectoryNames[ x ] MKDIR_RECURSE );
+
+#define mainFAT_TEST__TASK_PRIORITY	( tskIDLE_PRIORITY + 1 )
+				xTaskCreate( prvFileSystemAccessTask,
+							 pcName,
+							 mainFAT_TEST_STACK_SIZE,
+							 ( void * ) pcBaseDirectoryNames[ x ],
+							 mainFAT_TEST__TASK_PRIORITY,
+							 NULL );
+			}
+		}
+		else if( ( level == 0 ) && ( iFATRunning != 0 ) )
+		{
+			iFATRunning = 0;
+			FreeRTOS_printf( ( "FAT test stopped\n" ) );
+		}
+	}	/* if( strncmp( pcBuffer, "fattest", 7 ) == 0 ) */
+	#endif /* mainHAS_FAT_TEST */
+	else
+	{
+		xReturn = pdFALSE;
+	}
+
+	return xReturn;
+}
 
 uint32_t echoServerIPAddress()
 {
@@ -885,6 +1340,9 @@ uint32_t echoServerIPAddress()
 
 uint32_t HAL_GetTick(void)
 {
+	/* This timer can be used before the scheduler has started.
+	 * The high-resolution timer returns the time since startup
+	 * in micro-seconds. */
 	uint32_t ulCurTime = ( ullGetHighResolutionTime() / 1000ull );
 	return ulCurTime;
 }
@@ -892,7 +1350,7 @@ uint32_t HAL_GetTick(void)
 
 static void prvSetupHardware( void )
 {
-GPIO_InitTypeDef  GPIO_InitStruct;
+	GPIO_InitTypeDef  GPIO_InitStruct;
 
 	/* Configure Flash prefetch and Instruction cache through ART accelerator. */
 	#if( ART_ACCLERATOR_ENABLE != 0 )
@@ -933,6 +1391,23 @@ GPIO_InitTypeDef  GPIO_InitStruct;
 
 	/* MCO2 : Pin PC9 */
 	HAL_RCC_MCOConfig( RCC_MCO2, RCC_MCO2SOURCE_SYSCLK, RCC_MCODIV_1 );
+}
+/*-----------------------------------------------------------*/
+
+void BM_Delay( uint32_t ulDelayMS )
+{
+	/* BSP_SDRAM_Init() initialises the SDRAM driver. 
+	 * It is called far before the scheduler is running.
+	 * This function will use the HR-timer to measure time. */
+	uint32_t ulStartTime = HAL_GetTick();
+	for( ;; )
+	{
+		uint32_t ulNow = HAL_GetTick();
+		if( ( ulNow - ulStartTime ) > ulDelayMS )
+		{
+			break;
+		}
+	}
 }
 /*-----------------------------------------------------------*/
 
@@ -982,7 +1457,7 @@ static void prvSystemClockConfig( void )
 /* The following hook-function will be called from "STM32F4xx\ff_sddisk.c"
 in case the GPIO contact of the card-detect has changed. */
 
-void vApplicationCardDetectChangeHookFromISR( BaseType_t *pxHigherPriorityTaskWoken );
+EXTERN_C void vApplicationCardDetectChangeHookFromISR( BaseType_t *pxHigherPriorityTaskWoken );
 
 void vApplicationCardDetectChangeHookFromISR( BaseType_t *pxHigherPriorityTaskWoken )
 {
@@ -1020,6 +1495,134 @@ void vApplicationCardDetectChangeHookFromISR( BaseType_t *pxHigherPriorityTaskWo
 
 	}
 #endif
+/*-----------------------------------------------------------*/
+
+static BaseType_t xMatchDNS( const char * pcObject, const char * pcMyName )
+{
+taskENTER_CRITICAL();
+	BaseType_t rc = -1;
+	size_t uxLength = strlen( pcMyName );
+	const char *pcDot = strchr( pcObject, '.' );
+#if( ipconfigUSE_MDNS == 1 )
+	if( pcDot != NULL )
+	{
+		if( strcasecmp( pcDot, ".local" ) == 0 )
+		{
+			uxLength -= 6U;
+			rc = strncasecmp( pcMyName, pcObject, uxLength );
+		}
+	}
+	else
+#endif
+	{
+		rc = strncasecmp( pcMyName, pcObject, uxLength );
+	}
+	/*
+	 * "zynq" matches "zynq.local".
+	 */
+taskEXIT_CRITICAL();
+	return rc;
+}
+
+#if( ipconfigMULTI_INTERFACE != 0 )
+#warning Multi
+	EXTERN_C BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t *pxEndPoint, const char *pcName )
+#else
+#warning Single
+	EXTERN_C BaseType_t xApplicationDNSQueryHook( const char *pcName )
+#endif
+{
+BaseType_t xReturn;
+
+	/* Determine if a name lookup is for this node.  Two names are given
+	to this node: that returned by pcApplicationHostnameHook() and that set
+	by mainDEVICE_NICK_NAME. */
+	if( xMatchDNS( pcName, pcApplicationHostnameHook() ) == 0 )  /* "stm" */
+	{
+		xReturn = pdPASS;
+	}
+	else if( xMatchDNS( pcName, mainDEVICE_NICK_NAME ) == 0 )  /* "stm32f7" */
+	{
+		xReturn = pdPASS;
+	}
+	else if( xMatchDNS( pcName, "hs2011" ) == 0 )
+	{
+		xReturn = pdPASS;
+	}
+	else if( xMatchDNS( pcName, "aap" ) == 0 )
+	{
+#if( ipconfigUSE_IPv6 != 0 )
+		xReturn = pxEndPoint->bits.bIPv6 != 0;
+#else
+		xReturn = pdPASS;
+#endif
+	}
+	else if( xMatchDNS( pcName, "kat" ) == 0 )
+	{
+#if( ipconfigUSE_IPv6 != 0 )
+		xReturn = pxEndPoint->bits.bIPv6 == 0;
+		unsigned number = 0;
+		if( sscanf( pcName + 3, "%u", &number) > 0 )
+		{
+			if( number == 172 )
+			{
+				pxEndPoint->ipv4_settings.ulIPAddress = FreeRTOS_inet_addr_quick( 172,  16,   0, 114 );
+			}
+			else
+			if( number == 192 )
+			{
+			NetworkEndPoint_t *px;
+
+				for( px = FreeRTOS_FirstEndPoint( NULL );
+					px != NULL;
+					px = FreeRTOS_NextEndPoint( NULL, px ) )
+				{
+					if( px->bits.bIPv6 == pdFALSE_UNSIGNED )
+					{
+						break;
+					}
+				}
+				if( px != NULL )
+				{
+					pxEndPoint->ipv4_settings.ulIPAddress = px->ipv4_settings.ulIPAddress;
+				}
+				else
+				{
+					pxEndPoint->ipv4_settings.ulIPAddress = FreeRTOS_inet_addr_quick( 192,  168,   2, 114 );
+				}
+			}
+		}
+#else
+		xReturn = pdPASS;
+#endif
+	}
+	else
+	{
+		xReturn = pdFAIL;
+	}
+	#if( ipconfigUSE_IPv6 != 0 )
+	{
+		if( ( allowIPVersion & eIPv4 ) == 0 && !pxEndPoint->bits.bIPv6 )
+		{
+			xReturn = pdFAIL;
+		}
+		if( ( allowIPVersion & eIPv6 ) == 0 && pxEndPoint->bits.bIPv6 )
+		{
+			xReturn = pdFAIL;
+		}
+	}
+	#endif	/* ipconfigUSE_IPv6 */
+	if( xReturn )
+	{
+	#if( ipconfigMULTI_INTERFACE != 0 ) && ( ipconfigUSE_IPv6 != 0 )
+		FreeRTOS_printf( ( "LLMNR query '%s' = %d IPv%c\n", pcName, (int)xReturn, pxEndPoint->bits.bIPv6 ? '6' : '4' ) );
+	#else
+		FreeRTOS_printf( ( "LLMNR query '%s' = %d IPv4 only\n", pcName, (int)xReturn ) );
+	#endif
+	}
+
+	return xReturn;
+}
 /*-----------------------------------------------------------*/
 
 /* Called by FreeRTOS+TCP when the network connects or disconnects.  Disconnect
@@ -1066,26 +1669,27 @@ static BaseType_t xTasksAlreadyCreated = pdFALSE;
 			#endif
 
 			xTasksAlreadyCreated = pdTRUE;
+			xStartServices = EStartupStart;
 		}
 
 		#if( ipconfigMULTI_INTERFACE == 0 )
 		{
 		uint32_t ulIPAddress, ulNetMask, ulGatewayAddress, ulDNSServerAddress;
-		char cBuffer[ 16 ];
+		char pcBuffer[ 16 ];
 			/* Print out the network configuration, which may have come from a DHCP
 			server. */
 			FreeRTOS_GetAddressConfiguration( &ulIPAddress, &ulNetMask, &ulGatewayAddress, &ulDNSServerAddress );
-			FreeRTOS_inet_ntoa( ulIPAddress, cBuffer );
-			FreeRTOS_printf( ( "IP Address: %s\n", cBuffer ) );
+			FreeRTOS_inet_ntoa( ulIPAddress, pcBuffer );
+			FreeRTOS_printf( ( "IP Address: %s\n", pcBuffer ) );
 
-			FreeRTOS_inet_ntoa( ulNetMask, cBuffer );
-			FreeRTOS_printf( ( "Subnet Mask: %s\n", cBuffer ) );
+			FreeRTOS_inet_ntoa( ulNetMask, pcBuffer );
+			FreeRTOS_printf( ( "Subnet Mask: %s\n", pcBuffer ) );
 
-			FreeRTOS_inet_ntoa( ulGatewayAddress, cBuffer );
-			FreeRTOS_printf( ( "Gateway Address: %s\n", cBuffer ) );
+			FreeRTOS_inet_ntoa( ulGatewayAddress, pcBuffer );
+			FreeRTOS_printf( ( "Gateway Address: %s\n", pcBuffer ) );
 
-			FreeRTOS_inet_ntoa( ulDNSServerAddress, cBuffer );
-			FreeRTOS_printf( ( "DNS Server Address: %s\n", cBuffer ) );
+			FreeRTOS_inet_ntoa( ulDNSServerAddress, pcBuffer );
+			FreeRTOS_printf( ( "DNS Server Address: %s\n", pcBuffer ) );
 		}
 		#else
 		{
@@ -1111,6 +1715,7 @@ static BaseType_t xTasksAlreadyCreated = pdFALSE;
 }
 /*-----------------------------------------------------------*/
 
+EXTERN_C void vApplicationMallocFailedHook( void );
 void vApplicationMallocFailedHook( void )
 {
 	/* Called if a call to pvPortMalloc() fails because there is insufficient
@@ -1138,25 +1743,10 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 }
 /*-----------------------------------------------------------*/
 
-UBaseType_t uxRand( void )
-{
-const uint32_t ulMultiplier = 0x015a4e35UL, ulIncrement = 1UL;
+#if( USE_TCP_DEMO_CLI == 0 )
+	extern void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifier );
+#endif
 
-	/* Utility function to generate a pseudo random number. */
-
-	ulNextRand = ( ulMultiplier * ulNextRand ) + ulIncrement;
-	return( ( int ) ( ulNextRand >> 16UL ) & 0x7fffUL );
-}
-/*-----------------------------------------------------------*/
-
-static void prvSRand( UBaseType_t ulSeed )
-{
-	/* Utility function to seed the pseudo random number generator. */
-	ulNextRand = ulSeed;
-}
-/*-----------------------------------------------------------*/
-
-extern void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifier );
 extern const char *pcApplicationHostnameHook( void );
 
 #if( ipconfigMULTI_INTERFACE != 0 )
@@ -1165,24 +1755,13 @@ extern const char *pcApplicationHostnameHook( void );
 	BaseType_t xApplicationDNSQueryHook( const char *pcName );
 #endif
 
-void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifier )
-{
-	FreeRTOS_printf( ( "Ping status %d ID = %04x\n", eStatus, usIdentifier ) ) ;
-}
+#if( USE_TCP_DEMO_CLI == 0 )
+	void vApplicationPingReplyHook( ePingReplyStatus_t eStatus, uint16_t usIdentifier )
+	{
+		FreeRTOS_printf( ( "Ping status %d ID = %4d\n", eStatus, usIdentifier ) ) ;
+	}
+#endif
 /*-----------------------------------------------------------*/
-
-/* These are volatile to try and prevent the compiler/linker optimising them
-away as the variables never actually get used.  If the debugger won't show the
-values of the variables, make them global my moving their declaration outside
-of this function. */
-volatile uint32_t r0;
-volatile uint32_t r1;
-volatile uint32_t r2;
-volatile uint32_t r3;
-volatile uint32_t r12;
-volatile uint32_t lr; /* Link register. */
-volatile uint32_t pc; /* Program counter. */
-volatile uint32_t psr;/* Program status register. */
 
 struct xREGISTER_STACK {
 	uint32_t spare0[ 8 ];
@@ -1199,26 +1778,26 @@ struct xREGISTER_STACK {
 
 volatile struct xREGISTER_STACK *pxRegisterStack = NULL;
 
-void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
+EXTERN_C void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 {
 	pxRegisterStack = ( struct xREGISTER_STACK *) ( pulFaultStackAddress - ARRAY_SIZE( pxRegisterStack->spare0 ) );
-	r0 = pulFaultStackAddress[ 0 ];
-	r1 = pulFaultStackAddress[ 1 ];
-	r2 = pulFaultStackAddress[ 2 ];
-	r3 = pulFaultStackAddress[ 3 ];
-
-	r12 = pulFaultStackAddress[ 4 ];
-	lr = pulFaultStackAddress[ 5 ];
-	pc = pulFaultStackAddress[ 6 ];
-	psr = pulFaultStackAddress[ 7 ];
 
 	/* When the following line is hit, the variables contain the register values. */
-	for( ;; );
+	taskENTER_CRITICAL();
+	{
+		/* Set ul to a non-zero value using the debugger to step out of this
+		function. */
+		while( ipFALSE_BOOL )
+		{
+			__NOP();
+		}
+	}
+	taskEXIT_CRITICAL();
 }
 /*-----------------------------------------------------------*/
 
 //void HardFault_Handler( void ) __attribute__( ( naked ) );
-void HardFault_Handler(void)
+EXTERN_C void HardFault_Handler(void)
 {
 	__asm volatile
 	(
@@ -1232,6 +1811,8 @@ void HardFault_Handler(void)
 }
 /*-----------------------------------------------------------*/
 
+
+EXTERN_C void vAssertCalled( const char *pcFile, uint32_t ulLine );
 
 void vAssertCalled( const char *pcFile, uint32_t ulLine )
 {
@@ -1289,37 +1870,47 @@ uint32_t ulStackSize = (uint32_t)&(_Min_Stack_Size);
 /* In some cases, a library call will use malloc()/free(),
 redefine them to use pvPortMalloc()/vPortFree(). */
 
-void *malloc(size_t size)
+EXTERN_C void *malloc(size_t size)
 {
 	return pvPortMalloc(size);
 }
 /*-----------------------------------------------------------*/
 
-void free(void *ptr)
+EXTERN_C void free(void *ptr)
 {
 	vPortFree(ptr);
 }
 /*-----------------------------------------------------------*/
 
-extern void vOutputChar( const char cChar, const TickType_t xTicksToWait  );
-
+EXTERN_C void vOutputChar( const char cChar, const TickType_t xTicksToWait  );
 void vOutputChar( const char cChar, const TickType_t xTicksToWait  )
 {
 }
 /*-----------------------------------------------------------*/
 
+//RAM (xrw)        : ORIGIN = 0x20000000, LENGTH = 307K
+//Memory_B1(xrw)   : ORIGIN = 0x20010000, LENGTH = 0x80
+//Memory_B2(xrw)   : ORIGIN = 0x20010080, LENGTH = 0x80
+//Memory_B3(xrw)   : ORIGIN = 0x2004C000, LENGTH = 0x17d0 
+//Memory_B4(xrw)   : ORIGIN = 0x2004D7D0, LENGTH = 0x17d0
+
+EXTERN_C BaseType_t xApplicationMemoryPermissions( uint32_t aAddress );
 BaseType_t xApplicationMemoryPermissions( uint32_t aAddress )
 {
 BaseType_t xResult;
 #define FLASH_ORIGIN	0x08000000
 #define FLASH_LENGTH	( 1024 * 1024 )
 #define SRAM_ORIGIN		0x20000000
-#define SRAM_LENGTH		( 307 * 1024 )
+#define SRAM_LENGTH		( 400 * 1024 )//( 307 * 1024 )
+// max = 4CC00
+//  0x2004febc
 	if( aAddress >= FLASH_ORIGIN && aAddress < FLASH_ORIGIN + FLASH_LENGTH )
 	{
 		xResult = 1;
 	}
-	else if( aAddress >= SRAM_ORIGIN && aAddress < SRAM_ORIGIN + SRAM_LENGTH )
+	else if( ( aAddress >= SRAM_ORIGIN && aAddress < SRAM_ORIGIN + SRAM_LENGTH ) ||
+			 ( aAddress >= SDRAM_START && aAddress < SDRAM_START + SDRAM_SIZE ) )
+
 	{
 		xResult = 3;
 	}
@@ -1341,106 +1932,6 @@ const char *pcApplicationHostnameHook( void )
 }
 /*-----------------------------------------------------------*/
 
-
-#if( ipconfigMULTI_INTERFACE != 0 )
-BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t *pxEndPoint, const char *pcName )
-{
-BaseType_t xReturn = pdFAIL;
-
-	#if( ipconfigUSE_IPv6 != 0 )
-	if( pxEndPoint->bits.bIPv6 == pdFALSE_UNSIGNED )
-	{
-		FreeRTOS_printf( ( "IP[%s] IPv4request ignored\n", pcName ) );
-		return pdFALSE;
-	}
-	#endif
-
-	/* Determine if a name lookup is for this node.  Two names are given
-	to this node: that returned by pcApplicationHostnameHook() and that set
-	by mainDEVICE_NICK_NAME. */
-	if( strcasecmp( pcName, pcApplicationHostnameHook() ) == 0 )
-	{
-		xReturn = pdPASS;
-	}
-	else if( strcasecmp( pcName, mainDEVICE_NICK_NAME ) == 0 )
-	{
-		xReturn = pdPASS;
-	}
-	else if( strcasecmp( pcName, "iface1" ) == 0 )
-	{
-	NetworkEndPoint_t *pxNewEndPoint;
-	uint32_t ulIPAddress =
-			FreeRTOS_inet_addr_quick( ucIPAddress[ 0 ], ucIPAddress[ 1 ], ucIPAddress[ 2 ], ucIPAddress[ 3 ] );
-		pxNewEndPoint = FreeRTOS_FindEndPointOnNetMask( ulIPAddress, 999 );
-FreeRTOS_printf( ( "IP[%s] = %lxip end-point %d\n", pcName, ulIPAddress, pxNewEndPoint != NULL ) );
-		if( pxNewEndPoint != NULL )
-		{
-			memcpy( pxEndPoint, pxNewEndPoint, sizeof *pxEndPoint );
-			xReturn = pdPASS;
-		}
-	}
-	else if( strcasecmp( pcName, "iface2" ) == 0 )
-	{
-	NetworkEndPoint_t *pxNewEndPoint;
-	uint32_t ulIPAddress =
-			FreeRTOS_inet_addr_quick( ucIPAddress2[ 0 ], ucIPAddress2[ 1 ], ucIPAddress2[ 2 ], ucIPAddress2[ 3 ] );
-		pxNewEndPoint = FreeRTOS_FindEndPointOnNetMask( ulIPAddress, 999 );
-FreeRTOS_printf( ( "IP[%s] = %lxip end-point %d\n", pcName, ulIPAddress, pxNewEndPoint != NULL ) );
-		if( pxNewEndPoint != NULL )
-		{
-			memcpy( pxEndPoint, pxNewEndPoint, sizeof *pxEndPoint );
-			xReturn = pdPASS;
-		}
-	}
-/*
-	BaseType_t rc1, rc2;
-		rc1 = ( pxEndPoint->ulIPAddress ==
-			FreeRTOS_inet_addr_quick( ucIPAddress[ 0 ], ucIPAddress[ 1 ], ucIPAddress[ 2 ], ucIPAddress[ 3 ] ) );
-		if( rc1 && strcasecmp( pcName, "iface1" ) == 0 )
-		{
-			xReturn = pdPASS;
-		}
-		else
-		{
-			rc2 = ( pxEndPoint->ulIPAddress ==
-				FreeRTOS_inet_addr_quick( ucIPAddress2[ 0 ], ucIPAddress2[ 1 ], ucIPAddress2[ 2 ], ucIPAddress2[ 3 ] ) );
-			if( rc2 && strcasecmp( pcName, "iface2" ) == 0 )
-			{
-				xReturn = pdPASS;
-			}
-		}
-*/
-
-	if( strcasecmp(pcName, "wpad") != 0 )
-	{
-		#if( ipconfigUSE_IPv6 != 0 )
-		{
-			FreeRTOS_printf( ( "DNSQuery '%s': return %u for %xip and %pip\n",
-				pcName, xReturn, FreeRTOS_ntohl( pxEndPoint->ulIPAddress ), pxEndPoint->ulIPAddress_IPv6.ucBytes ) );
-		}
-		#else
-		{
-			FreeRTOS_printf( ( "DNSQuery '%s': return %u for %xip\n",
-				pcName, xReturn, FreeRTOS_ntohl( pxEndPoint->ulIPAddress ) ) );
-		}
-		#endif
-	}
-
-	return xReturn;
-}
-/*-----------------------------------------------------------*/
-#else
-
-BaseType_t xApplicationDNSQueryHook( const char *pcName )
-{
-	BaseType_t rc = strcasecmp( mainHOST_NAME, pcName) == 0 || strcasecmp( mainDEVICE_NICK_NAME, pcName) == 0;
-	if (rc || verboseLevel)
-		FreeRTOS_printf( ( "Comp '%s' with '%s'/'%s' %ld\n", pcName, mainHOST_NAME, mainDEVICE_NICK_NAME, rc ) );
-	return rc;
-}
-/*-----------------------------------------------------------*/
-#endif
-
 extern void vConfigureTimerForRunTimeStats( void );
 extern uint32_t ulGetRunTimeCounterValue( void );
 
@@ -1454,7 +1945,7 @@ uint32_t ulGetRunTimeCounterValue( void )
 	return ( uint32_t ) ( ullGetHighResolutionTime() - ullHiresTime );
 }
 
-extern BaseType_t xTaskClearCounters;
+/*extern*/ BaseType_t xTaskClearCounters;
 void vShowTaskTable( BaseType_t aDoClear )
 {
 TaskStatus_t *pxTaskStatusArray;
@@ -1469,7 +1960,7 @@ uint32_t ulStackSize;
 
 	// Allocate a TaskStatus_t structure for each task.  An array could be
 	// allocated statically at compile time.
-	pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+	pxTaskStatusArray = ( TaskStatus_t * ) pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
 
 	FreeRTOS_printf( ( "Task name    Prio    Stack    Time(uS) Perc \n" ) );
 
@@ -1539,6 +2030,7 @@ uint32_t ulStackSize;
 	/*-----------------------------------------------------------*/
 
 	#if GNUC_NEED_SBRK
+		EXTERN_C void *_sbrk( ptrdiff_t __incr);
 		void *_sbrk( ptrdiff_t __incr)
 		{
 			unknown_calls++;
@@ -1552,34 +2044,14 @@ uint32_t ulStackSize;
 
 void vApplicationTickHook( void )
 {
-//	#if( mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 0 )
-//	{
-//		/* The full demo includes a software timer demo/test that requires
-//		prodding periodically from the tick interrupt. */
-//		vTimerPeriodicISRTests();
-//
-//		/* Call the periodic queue overwrite from ISR demo. */
-//		vQueueOverwritePeriodicISRDemo();
-//
-//		/* Call the periodic event group from ISR demo. */
-//		vPeriodicEventGroupsProcessing();
-//
-//		/* Call the code that uses a mutex from an ISR. */
-//		vInterruptSemaphorePeriodicTest();
-//
-//		/* Use a queue set from an ISR. */
-//		vQueueSetAccessQueueSetFromISR();
-//
-//		/* Use task notifications from an ISR. */
-//		xNotifyTaskFromISR();
-//	}
-//	#endif
 }
 /*-----------------------------------------------------------*/
 
+EXTERN_C void _init();
 void _init()
 {
 }
+
 
 /*_HT_ Please consider keeping the function below called HAL_ETH_MspInit().
 It will be called from "stm32f4xx_hal_eth.c".
@@ -1633,58 +2105,6 @@ void HAL_ETH_MspInit( ETH_HandleTypeDef* heth )
         /* Enable ETHERNET clock  */
         __HAL_RCC_ETH_CLK_ENABLE();
     }
-}
-
-size_t uxPortGetSize( void * pvAddres );
-void *pvPortRealloc( void *pvAddres, size_t uxNewSize );
-
-typedef struct xAlloc
-{
-	void *ptr;
-	size_t size1;
-}
-Alloc_t;
-
-void realloc_test()
-{
-	Alloc_t allocs[ 10 ];
-	int index;
-	for( index = 0; index < ARRAY_SIZE( allocs ); index++ )
-	{
-		allocs[ index ].size1 = 2 + rand() % 19;
-		allocs[ index ].ptr = pvPortMalloc( allocs[ index ].size1 );
-		if( allocs[ index ].ptr )
-		{
-			memset( allocs[ index ].ptr, 'A' + index, allocs[ index ].size1 );
-		}
-	}
-	FreeRTOS_printf( ( "Allocated: %2d %2d %2d %2d %2d  %2d %2d %2d %2d %2d\n",
-		allocs[ 0 ].size1,
-		allocs[ 1 ].size1,
-		allocs[ 2 ].size1,
-		allocs[ 3 ].size1,
-		allocs[ 4 ].size1,
-		allocs[ 5 ].size1,
-		allocs[ 6 ].size1,
-		allocs[ 7 ].size1,
-		allocs[ 8 ].size1,
-		allocs[ 9 ].size1 ) );
-	for( index = 0; index < ARRAY_SIZE( allocs ); index++ )
-	{
-		size_t get_size = uxPortGetSize( allocs[ index ].ptr );
-		size_t old_size = allocs[ index ].size1;
-
-		allocs[ index ].size1 = 6 + rand() % 15;
-		allocs[ index ].ptr = pvPortRealloc( allocs[ index ].ptr, allocs[ index ].size1 );
-		FreeRTOS_printf( ( "%2d: old %2d %2d new %2d contents: '%*.*s'\n",
-			index,
-			get_size,
-			old_size,
-			allocs[ index ].size1,
-			allocs[ index ].size1,
-			allocs[ index ].size1,
-			allocs[ index ].ptr ) ) ;
-	}
 }
 
 #ifdef DEBUG
@@ -1742,7 +2162,7 @@ void tcpServerStart()
 void tcpServerWork()
 {
 	struct freertos_sockaddr xClient;
-	BaseType_t xSize = sizeof(xClient);
+	socklen_t xSize = sizeof(xClient);
 	if( xChildSocket != NULL ) {
 		unsigned char pucRxBuffer[ 1400 ];
 		BaseType_t lBytes = FreeRTOS_recv( xChildSocket, pucRxBuffer, ipconfigTCP_MSS, 0 );
@@ -1779,15 +2199,39 @@ void tcpServerWork()
 	}
 }
 
+static void prvFTPTask (void *pvParameters )
+{
+	for (;; )
+	{
+		if( ( pxSDDisk != NULL ) || ( pxRAMDisk != NULL ) )
+		{
+			#if( ipconfigUSE_HTTP != 0 ) || ( ipconfigUSE_FTP != 0 )
+			{
+				const TickType_t xInitialBlockTime = pdMS_TO_TICKS( 100U );
+				FreeRTOS_TCPServerWork( pxTCPServer, xInitialBlockTime );
+			}
+			#endif
+		}
+		else
+		{
+			vTaskDelay (10);
+		}
+	}
+}
+
 uint32_t ulApplicationGetNextSequenceNumber(
     uint32_t ulSourceAddress,
     uint16_t usSourcePort,
     uint32_t ulDestinationAddress,
     uint16_t usDestinationPort )
 {
-	return ipconfigRAND32();
+	uint32_t ulReturn;
+	xApplicationGetRandomNumber( &( ulReturn ) );
+	return ulReturn;
 }
 
+EXTERN_C void xPortSysTickHandler( void );
+EXTERN_C void SysTick_Handler(void);
 void SysTick_Handler(void)
 {
 	/* USER CODE BEGIN SysTick_IRQn 0 */
@@ -1801,115 +2245,298 @@ void SysTick_Handler(void)
 
 	/* USER CODE END SysTick_IRQn 1 */
 }
-//void SysTick_Handler(void)
-//{
-//	HAL_IncTick();
-//}
 
-//extern void NMI_Handler( void )                   { for( ;; ) { __NOP(); } }
-//extern void HardFault_Handler( void )             { for( ;; ) { __NOP(); } }
-//extern void MemManage_Handler( void )             { for( ;; ) { __NOP(); } }
-//extern void BusFault_Handler( void )              { for( ;; ) { __NOP(); } }
-//extern void UsageFault_Handler( void )            { for( ;; ) { __NOP(); } }
-//extern void SVC_Handler( void )                   { for( ;; ) { __NOP(); } }
-//extern void DebugMon_Handler( void )              { for( ;; ) { __NOP(); } }
-//extern void PendSV_Handler( void )                { for( ;; ) { __NOP(); } }
-//extern void SysTick_Handler( void )               { for( ;; ) { __NOP(); } }
-extern void WWDG_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void PVD_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void TAMP_STAMP_IRQHandler( void )         { for( ;; ) { __NOP(); } }
-extern void RTC_WKUP_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void FLASH_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void RCC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void EXTI0_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void EXTI1_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void EXTI2_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void EXTI3_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void EXTI4_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream0_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream1_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream2_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream3_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream5_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream6_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void ADC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void CAN1_TX_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void CAN1_RX0_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void CAN1_RX1_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void CAN1_SCE_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void EXTI9_5_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void TIM1_BRK_TIM9_IRQHandler( void )      { for( ;; ) { __NOP(); } }
-extern void TIM1_UP_TIM10_IRQHandler( void )      { for( ;; ) { __NOP(); } }
-extern void TIM1_TRG_COM_TIM11_IRQHandler( void ) { for( ;; ) { __NOP(); } }
-extern void TIM1_CC_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-//extern void TIM2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void TIM3_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void TIM4_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void I2C1_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void I2C1_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void I2C2_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void I2C2_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void SPI1_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void SPI2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void USART1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void USART2_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void USART3_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-//extern void EXTI15_10_IRQHandler( void )          { for( ;; ) { __NOP(); } }
-extern void RTC_Alarm_IRQHandler( void )          { for( ;; ) { __NOP(); } }
-extern void OTG_FS_WKUP_IRQHandler( void )        { for( ;; ) { __NOP(); } }
-extern void TIM8_BRK_TIM12_IRQHandler( void )     { for( ;; ) { __NOP(); } }
-extern void TIM8_UP_TIM13_IRQHandler( void )      { for( ;; ) { __NOP(); } }
-extern void TIM8_TRG_COM_TIM14_IRQHandler( void ) { for( ;; ) { __NOP(); } }
-extern void TIM8_CC_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void DMA1_Stream7_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void FMC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-//extern void SDMMC1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void TIM5_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void SPI3_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void UART4_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void UART5_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void TIM6_DAC_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void TIM7_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream0_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream1_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream2_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-//extern void DMA2_Stream3_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-//extern void DMA2_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-//extern void ETH_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void ETH_WKUP_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void CAN2_TX_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void CAN2_RX0_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void CAN2_RX1_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void CAN2_SCE_IRQHandler( void )           { for( ;; ) { __NOP(); } }
-extern void OTG_FS_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream5_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-//extern void DMA2_Stream6_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void DMA2_Stream7_IRQHandler( void )       { for( ;; ) { __NOP(); } }
-extern void USART6_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void I2C3_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void I2C3_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void OTG_HS_EP1_OUT_IRQHandler( void )     { for( ;; ) { __NOP(); } }
-extern void OTG_HS_EP1_IN_IRQHandler( void )      { for( ;; ) { __NOP(); } }
-extern void OTG_HS_WKUP_IRQHandler( void )        { for( ;; ) { __NOP(); } }
-extern void OTG_HS_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void DCMI_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void RNG_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void FPU_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void UART7_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void UART8_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void SPI4_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void SPI5_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void SPI6_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void SAI1_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void LTDC_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void LTDC_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void DMA2D_IRQHandler( void )              { for( ;; ) { __NOP(); } }
-extern void SAI2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
-extern void QUADSPI_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void LPTIM1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
-extern void CEC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
-extern void I2C4_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void I2C4_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
-extern void SPDIF_RX_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+//EXTERN_C void NMI_Handler( void )                   { for( ;; ) { __NOP(); } }
+//EXTERN_C void HardFault_Handler( void )             { for( ;; ) { __NOP(); } }
+//EXTERN_C void MemManage_Handler( void )             { for( ;; ) { __NOP(); } }
+//EXTERN_C void BusFault_Handler( void )              { for( ;; ) { __NOP(); } }
+//EXTERN_C void UsageFault_Handler( void )            { for( ;; ) { __NOP(); } }
+//EXTERN_C void SVC_Handler( void )                   { for( ;; ) { __NOP(); } }
+//EXTERN_C void DebugMon_Handler( void )              { for( ;; ) { __NOP(); } }
+//EXTERN_C void PendSV_Handler( void )                { for( ;; ) { __NOP(); } }
+//EXTERN_C void SysTick_Handler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void WWDG_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void PVD_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void TAMP_STAMP_IRQHandler( void )         { for( ;; ) { __NOP(); } }
+EXTERN_C void RTC_WKUP_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void FLASH_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void RCC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI0_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI1_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI2_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI3_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI4_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream0_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream1_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream2_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream3_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream5_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream6_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void ADC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN1_TX_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN1_RX0_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN1_RX1_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN1_SCE_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void EXTI9_5_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM1_BRK_TIM9_IRQHandler( void )      { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM1_UP_TIM10_IRQHandler( void )      { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM1_TRG_COM_TIM11_IRQHandler( void ) { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM1_CC_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+//EXTERN_C void TIM2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM3_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM4_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C1_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C1_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C2_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C2_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI1_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void USART1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void USART2_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void USART3_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+//EXTERN_C void EXTI15_10_IRQHandler( void )          { for( ;; ) { __NOP(); } }
+EXTERN_C void RTC_Alarm_IRQHandler( void )          { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_FS_WKUP_IRQHandler( void )        { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM8_BRK_TIM12_IRQHandler( void )     { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM8_UP_TIM13_IRQHandler( void )      { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM8_TRG_COM_TIM14_IRQHandler( void ) { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM8_CC_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA1_Stream7_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void FMC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+//EXTERN_C void SDMMC1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM5_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI3_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void UART4_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void UART5_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM6_DAC_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void TIM7_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA2_Stream0_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA2_Stream1_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA2_Stream2_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+//EXTERN_C void DMA2_Stream3_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+#if( HAS_AUDIO == 0 )
+	EXTERN_C void DMA2_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+#endif
+//EXTERN_C void DMA2_Stream4_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+//EXTERN_C void ETH_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void ETH_WKUP_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN2_TX_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN2_RX0_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN2_RX1_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void CAN2_SCE_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_FS_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA2_Stream5_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+//EXTERN_C void DMA2_Stream6_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+#if( HAS_AUDIO == 0 )
+	EXTERN_C void DMA2_Stream7_IRQHandler( void )       { for( ;; ) { __NOP(); } }
+#endif
+EXTERN_C void USART6_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C3_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C3_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_HS_EP1_OUT_IRQHandler( void )     { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_HS_EP1_IN_IRQHandler( void )      { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_HS_WKUP_IRQHandler( void )        { for( ;; ) { __NOP(); } }
+EXTERN_C void OTG_HS_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void DCMI_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void RNG_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void FPU_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void UART7_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void UART8_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI4_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI5_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void SPI6_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void SAI1_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void LTDC_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void LTDC_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void DMA2D_IRQHandler( void )              { for( ;; ) { __NOP(); } }
+EXTERN_C void SAI2_IRQHandler( void )               { for( ;; ) { __NOP(); } }
+EXTERN_C void QUADSPI_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void LPTIM1_IRQHandler( void )             { for( ;; ) { __NOP(); } }
+EXTERN_C void CEC_IRQHandler( void )                { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C4_EV_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void I2C4_ER_IRQHandler( void )            { for( ;; ) { __NOP(); } }
+EXTERN_C void SPDIF_RX_IRQHandler( void )           { for( ;; ) { __NOP(); } }
+
+EXTERN_C void vListInsertGeneric( List_t * const pxList,
+								ListItem_t * const pxNewListItem,
+								MiniListItem_t * const pxWhere );
+__attribute__((weak)) void vListInsertGeneric( List_t * const pxList,
+								ListItem_t * const pxNewListItem,
+								MiniListItem_t * const pxWhere )
+{
+	/* Insert a new list item into pxList, it does not sort the list,
+	 * but it puts the item just before xListEnd, so it will be the last item
+	 * returned by listGET_HEAD_ENTRY() */
+	pxNewListItem->pxNext = ( struct xLIST_ITEM * configLIST_VOLATILE ) pxWhere;
+	pxNewListItem->pxPrevious = pxWhere->pxPrevious;
+	pxWhere->pxPrevious->pxNext = pxNewListItem;
+	pxWhere->pxPrevious = pxNewListItem;
+
+	/* Remember which list the item is in. */
+	listLIST_ITEM_CONTAINER( pxNewListItem ) = ( struct xLIST * configLIST_VOLATILE ) pxList;
+
+	( pxList->uxNumberOfItems )++;
+}
+
+void Set_LED_Number( BaseType_t xNumber, BaseType_t xValue )
+{
+}
+
+int	vfprintf_r (struct _reent *apReent, FILE *apFile, const char *apFmt, va_list args)
+{
+	(void)apReent;
+	(void)apFile;
+	(void)apFmt;
+	(void)args;
+	return 0;
+}
+
+int	fclose_r (struct _reent *apReent, FILE *apFile)
+{
+	(void)apReent;
+	(void)apFile;
+	return 0;
+}
+
+_ssize_t _write_r (struct _reent *apReent, int aHandle, const void *ap, size_t aSize)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)ap;
+	(void)aSize;
+	return 0;
+}
+
+int _close_r (struct _reent *apReent, int aHandle)
+{
+	(void)apReent;
+	(void)aHandle;
+	return 0;
+}
+
+_ssize_t _read_r (struct _reent *apReent, int aHandle, void *apPtr, size_t aSize)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)apPtr;
+	(void)aSize;
+	return 0;
+}
+
+_off_t _lseek_r (struct _reent *apReent, int aHandle, _off_t aOffset, int aWhence)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)aOffset;
+	(void)aWhence;
+	return 0;
+}
+
+int	fclose (FILE *apFile)
+{
+	(void)apFile;
+	configASSERT( 0 );
+	return 0;
+}
+
+int	_fclose_r (struct _reent *apReent, FILE *apFile)
+{
+	(void)apReent;
+	(void)apFile;
+	configASSERT( 0 );
+	return 0;
+}
+
+void exit(int status)
+{
+	configASSERT( 0 );
+	( void ) status;
+	for( ;; )
+	{
+	}
+}
+
+void __libc_fini_array (void)
+{
+}
+
+#include <sys/stat.h>
+
+int _stat(const char fname, struct stat *pstat)
+{
+	( void ) pstat;
+	configASSERT( 0 );
+	return 0;
+}
+
+int _fstat_r(struct _reent *ptr, int fd, struct stat *pstat)
+{
+	( void ) ptr;
+	( void ) fd;
+	( void ) pstat;
+	configASSERT( 0 );
+	return 0;
+}
+
+int _isatty_r(struct _reent *ptr, int fd)
+{
+	configASSERT( 0 );
+	return 0;
+}
+
+#include "E:\Home\amazon-freertos\ipv6\amazon-freertos\libraries\freertos_plus\standard\freertos_plus_tcp\tools\tcp_utilities\tcp_dump_packets.c"
+
+extern time_t time ( time_t *puxTime );
+time_t time ( time_t *puxTime )
+{
+	time_t rc = FreeRTOS_time( puxTime );
+	return rc;
+}
+
+void sdcard_test(void);
+void sdcard_test(void)
+{
+}
+
+void HAL_SD_MspInit( SD_HandleTypeDef * hsd )
+{
+    ( void ) hsd;
+    /* NOTE : This function Should not be modified, when the callback is needed,
+     *        the HAL_SD_MspInit could be implemented in the user file
+     */
+}
+
+#if ( ipconfigMULTI_INTERFACE == 0 )
+	extern BaseType_t xNTPHasTime;
+	extern uint32_t ulNTPTime;
+
+	struct
+	{
+		uint32_t ntpTime;
+	}
+	time_guard;
+
+	int set_time( time_t * pxTime )
+	{
+		( void ) pxTime;
+		time_guard.ntpTime = ulNTPTime - xTaskGetTickCount() / configTICK_RATE_HZ;
+		return 0;
+	}
+
+	time_t get_time( time_t * puxTime )
+	{
+		if( xNTPHasTime != pdFALSE )
+		{
+			TickType_t passed = xTaskGetTickCount() / configTICK_RATE_HZ;
+
+			*( puxTime ) = time_guard.ntpTime + passed;
+		}
+		else
+		{
+			*( puxTime ) = 0U;
+		}
+
+		return 1;
+	}
+#endif

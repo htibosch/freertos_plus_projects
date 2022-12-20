@@ -4,25 +4,35 @@
 
 # Four choices for network and FAT driver:
 
+ipconfigMULTI_INTERFACE=true
+ipconfigUSE_IPv6=true
+
+TCP_SOURCE=
+#TCP_SOURCE=/Source
+
 USE_FREERTOS_PLUS=true
 
 # ChaN's FS versus +FAT
 USE_PLUS_FAT=true
 
-# Some experiments called 'tamas'
-USE_TAMAS=false
-USE_TOM=true
+USE_TCP_DEMO_CLI=true
+ipconfigUSE_NTP_DEMO=true
 
-# Fill in your Xilinx version
+# Fill in you Xilinx version
+
+#	C:\Xilinx\SDK\2016.4\gnu\arm\nt\bin
+#GCC_PREFIX=arm-xilinx-eabi
+# XILINX_PATH=C:/Xilinx/SDK/2016.4
+# GCC_BIN=$(XILINX_PATH)/gnu/arm/nt/bin
+
+# GCC_PREFIX=aarch64-none-elf
+# XILINX_PATH=C:/Xilinx/SDK/2017.1
+# GCC_BIN=$(XILINX_PATH)/gnu/aarch64/nt/aarch64-none/bin
+
 
 GCC_PREFIX=arm-none-eabi
-
-# XILINX_PATH=E:/Xilinx/SDK/2019.1
-# GCC_BIN=$(XILINX_PATH)/gnu/aarch32/nt/gcc-arm-none-eabi/bin
-
-XILINX_PATH=$(HOME)/gcc-arm-none-eabi-7-2017-q4-major
-GCC_BIN=$(XILINX_PATH)/bin
-
+XILINX_PATH=E:\Xilinx\SDK\2019.1
+GCC_BIN=$(XILINX_PATH)/gnu/aarch32/nt/gcc-arm-none-eabi/bin
 
 SMALL_SIZE=false
 
@@ -31,23 +41,17 @@ ipconfigUSE_WOLFSSL=false
 ipconfigUSE_HTTP=false
 ipconfigUSE_FTP=true
 
-# Testing TCP Scaling Window for Steve Currie
+USE_PCAP=true
 
-ipconfigMULTI_INTERFACE=false
-ipconfigUSE_IPv6=true
+ipconfigUSE_TCP_NET_STAT=false
 
-
-ipconfigOLD_MULTI=false
-ipconfigUSE_TCP_MEM_STATS=true
-
-ifeq ($(ipconfigMULTI_INTERFACE),false)
-	ipconfigUSE_IPv6=false
-	ipconfigOLD_MULTI=false
-endif
+ipconfigUSE_TCP_MEM_STATS=false
 
 USE_LOG_EVENT=true
 
 USE_TELNET=true
+
+USE_NTOP_TEST=false
 
 USE_IPERF=true
 
@@ -58,14 +62,18 @@ CUR_PATH = $(subst /fireworks,,$(abspath ./fireworks))
 HOME_PATH = $(subst /fireworks,,$(abspath ../../../fireworks))
 AMAZON_ROOT = $(HOME_PATH)/amazon-freertos/amazon-freertos
 
-# FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOSV8.2.1
-# FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOS_V8.2.2
-# FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOSV8.2.3
-# FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOS_v9.0.0
+# FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOSV8.2.1
+# FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_V8.2.2
+# FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOSV8.2.3
+# FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_v9.0.0
 
-# /home/hein/work/plus/Framework/FreeRTOS_V10.2.1/include/
-FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOS_V10.2.1
-#FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOS_V10.2.0
+FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_V10.4.3
+
+# FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_V10.4.4
+
+#FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_v10.2.1
+#FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_v10.0.0
+#FreeRTOS_PATH = $(ROOT_PATH)/framework/FreeRTOS_V10.2.0
 
 # FreeRTOS_v10.0.0
 # FreeRTOS_V10.1.1
@@ -79,19 +87,20 @@ FreeRTOS_PATH = $(ROOT_PATH)/Framework/FreeRTOS_V10.2.1
 # FreeRTOS_v9.0.0
 # FreeRTOS_V9.0.0rc2
 
-Utilities_PATH = $(ROOT_PATH)/Framework/Utilities
+Utilities_PATH = $(ROOT_PATH)/framework/Utilities
+MYSOURCE_PATH = $(ROOT_PATH)/framework/MySource
 CommonUtilities_PATH = $(ROOT_PATH)/Common/Utilities
 # The path where this Makefile is located:
 DEMO_PATH = $(PRJ_PATH)/RTOSDemo
-#WOLFSSL_PATH = $(ROOT_PATH)/Framework/wolfssl
-#WOLFSSL_PATH = $(ROOT_PATH)/Framework/wolfssl-3.10.4
-WOLFSSL_PATH = $(ROOT_PATH)/Framework/wolfssl.master
+#WOLFSSL_PATH = $(ROOT_PATH)/framework/wolfssl
+#WOLFSSL_PATH = $(ROOT_PATH)/framework/wolfssl-3.10.4
+WOLFSSL_PATH = $(ROOT_PATH)/framework/wolfssl.master
 
 #LDLIBS=-Wl,--start-group,-lxil,-lgcc,-lc,--end-group
 LDLIBS=-Wl,--start-group,-lgcc,-lc,--end-group
 
 CONFIG_USE_LWIP=false
-USE_TCP_TESTER=true
+USE_TCP_TESTER=false
 
 DEFS =
 
@@ -102,9 +111,8 @@ LD_EXTRA_FLAGS =-nostartfiles \
 
 
 INC_RTOS = \
-	$(FreeRTOS_PATH)/include/ \
-	$(FreeRTOS_PATH)/include/private/ \
-	$(FreeRTOS_PATH)/portable/GCC/ARM_CA9/
+	$(FreeRTOS_PATH)/include/private \
+	$(FreeRTOS_PATH)/include
 
 CORTEX_PATH = \
 	$(PRJ_PATH)/RTOSDemo_bsp/ps7_cortexa9_0/include
@@ -115,10 +123,17 @@ LIB_PATH = \
 	$(PRJ_PATH)/RTOSDemo_bsp/ps7_cortexa9_0/lib
 
 PLUS_FAT_PATH = \
-	$(ROOT_PATH)/Framework/FreeRTOS-Plus-FAT
+	$(ROOT_PATH)/framework/FreeRTOS-Plus-FAT
 
-ZYNQ_POR_TPATH= \
-	$(PLUS_FAT_PATH)/portable/Zynq.2019.3/
+#PLUS_FAT_PATH = \
+#	$(ROOT_PATH)/../amazon-freertos/Renesas_FAT
+
+ZYNQ_PORTABLE_PATH = \
+	$(PLUS_FAT_PATH)/portable/Zynq.2019.3
+#	$(ROOT_PATH)/../amazon-freertos/Lab-Project-FreeRTOS-FAT/portable/Zynq.2019.3
+
+#	$(PLUS_FAT_PATH)/portable/Zynq.2019.3
+#	$(PLUS_FAT_PATH)/portable/Zynq.modi
 
 #	$(PLUS_FAT_PATH)/portable/zynq/
 
@@ -126,21 +141,36 @@ LINKER_SCRIPT=$(DEMO_PATH)/src/lscript.ld
 
 INCLUDE_PS7_INIT=false
 
+# Use the standard pvPortMalloc()/vPortFree()
+# myMalloc/myFree not available.
+DEFS += -DHEAP_IN_SDRAM=1
+
 ifeq ($(ipconfigMULTI_INTERFACE),true)
 	DEFS += -DipconfigMULTI_INTERFACE=1
-	ifeq ($(ipconfigOLD_MULTI),true)
-		PLUS_TCP_PATH = \
-			$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP_multi_30_aug_2018
-		DEFS += -DipconfigOLD_MULTI=1
-	else
-		PLUS_TCP_PATH = \
-			$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-multi
-	endif
+	PLUS_TCP_PATH = \
+		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-multi.v2.3.1
 else
 	DEFS += -DipconfigMULTI_INTERFACE=0
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP
+		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP.v2.3.4
+	ipconfigUSE_IPv6=false
 endif
+
+# Check for \Home\amazon-freertos\ipv6\FreeRTOS-Plus-TCP\source\FreeRTOS_IP_Timers.c
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/source/FreeRTOS_IP_Timers.c))
+    # Old style with big source files
+    TCP_SHORT_SOURCE_FILES=false
+else
+    # New style with smaller source files
+    TCP_SHORT_SOURCE_FILES=true
+	TCP_SOURCE=/source
+endif
+
+NETWORK_PATH = \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface
+
+TCP_UTILITIES=$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-multi.v2.3.1/tools/tcp_utilities
 
 ifeq ($(ipconfigUSE_IPv6),true)
 	DEFS += -DipconfigUSE_IPv6=1
@@ -148,18 +178,12 @@ else
 	DEFS += -DipconfigUSE_IPv6=0
 endif
 
-	DEFS += -DipconfigULTRASCALE=0
-
-ifeq ($(ipconfigUSE_TCP_MEM_STATS),true)
-	DEFS += -DipconfigUSE_TCP_MEM_STATS=1
-else
-	DEFS += -DipconfigUSE_TCP_MEM_STATS=0
-endif
-
 DEFS += -D CPU_ZYNQ=1
 
 INC_PATH = \
 	$(DEMO_PATH)/ \
+	$(FreeRTOS_PATH)/include/ \
+	$(FreeRTOS_PATH)/portable/GCC/ARM_CA9/ \
 	$(DEMO_PATH)/src/Full_Demo/ \
 	$(DEMO_PATH)/src/Full_Demo/FreeRTOS-Plus-CLI/ \
 	$(DEMO_PATH)/src/Full_Demo/Standard-Demo-Tasks/include/ \
@@ -167,7 +191,8 @@ INC_PATH = \
 	$(ROOT_PATH)/Framework/Utilities/ \
 	$(CORTEX_PATH)/ \
 	$(DEMO_PATH)/src/ \
-	$(INC_RTOS)
+	$(INC_RTOS)/ \
+	$(TCP_UTILITIES)/include/
 
 # Now collect all C and S sources:
 
@@ -182,6 +207,27 @@ HW_FLAGS=-mtune=cortex-a9 -mcpu=cortex-a9 -march=armv7-a -mfpu=neon
 
 PROCESSOR=ps7_cortexa9_0
 CPU_PATH = $(PRJ_PATH)/RTOSDemo_bsp
+
+ifeq ($(TCP_SHORT_SOURCE_FILES),true)
+    # New style with smaller source files
+	# /source/<sources>
+	# /source/include
+	# /source/portable
+INC_PATH += \
+	$(PLUS_TCP_PATH)/source/include/ \
+	$(PLUS_TCP_PATH)/source/portable/Compiler/GCC/ \
+	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/include/ \
+	$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/ \
+	$(PLUS_TCP_PATH)/tools/tcp_utilities/include/
+else
+    # Old style with big source files
+INC_PATH += \
+	$(PLUS_TCP_PATH)/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/Compiler/GCC/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/include/ \
+	$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/NetworkInterface/STM32Fxx/ \
+	$(PLUS_TCP_PATH)/tools/tcp_utilities/include/
+endif
 
 INC_PATH += \
 	$(CPU_PATH)/$(PROCESSOR)/libsrc/cpu_cortexa9_v2_1/src/ \
@@ -249,16 +295,38 @@ C_SRCS += \
 	$(DEMO_PATH)/src/FreeRTOS_tick_config.c \
 	$(DEMO_PATH)/src/ParTest.c \
 	$(DEMO_PATH)/src/main.c \
+	$(DEMO_PATH)/src/test_source.c \
 	$(DEMO_PATH)/src/task_wdt.c \
 	$(DEMO_PATH)/src/ff_stdio_tests_with_cwd.c \
 	$(DEMO_PATH)/src/CreateAndVerifyExampleFiles.c \
 	$(DEMO_PATH)/src/hr_gettime.c \
 	$(DEMO_PATH)/src/platform.c \
 	$(CommonUtilities_PATH)/UDPLoggingPrintf.c \
-	$(CommonUtilities_PATH)/printf-stdarg.c
-	
+	$(CommonUtilities_PATH)/printf-stdarg.c \
+	$(TCP_UTILITIES)/http_client_test.c \
+	$(CommonUtilities_PATH)/memcpy.c
+
 ifeq ($(ipconfigUSE_TCP_MEM_STATS),true)
-	C_SRCS += $(PLUS_TCP_PATH)/tools/tcp_mem_stats.c
+	C_SRCS += $(TCP_UTILITIES)/tcp_mem_stats.c
+	DEFS += -DipconfigUSE_TCP_MEM_STATS=1
+else
+	DEFS += -DipconfigUSE_TCP_MEM_STATS=0
+endif
+
+ifeq ($(ipconfigUSE_TCP_NET_STAT),true)
+	C_SRCS += $(TCP_UTILITIES)/tcp_netstat.c
+	INC_PATH += $(TCP_UTILITIES)/include
+	DEFS += -DipconfigUSE_TCP_NET_STAT=1
+else
+	DEFS += -DipconfigUSE_TCP_NET_STAT=0
+endif
+
+ifeq ($(USE_NTOP_TEST),true)
+	DEFS += -DUSE_NTOP_TEST=1
+	C_SRCS += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/test/inet_pton_ntop_tests.c
+	INC_PATH += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/test
 endif
 
 ifeq ($(USE_IPERF),true)
@@ -269,26 +337,11 @@ else
 	DEFS += -D USE_IPERF=0
 endif
 
-ifeq ($(USE_TOM),true)
-	DEFS += -DUSE_TOM=1
-#	C_SRCS += \
-#		$(DEMO_PATH)/src/sendping.c
-endif
-
-#	$(DEMO_PATH)/src/uncached_memory.c
-
-#	$(DEMO_PATH)/plus_echo_client.c
-
-#C_SRCS += \
-#	$(CommonUtilities_PATH)/memcpy.c
-
 C_SRCS += \
 	$(DEMO_PATH)/src/SimpleTCPEServer.c
 
 LD_SRCS += \
 	$(DEMO_PATH)/src/lscript.ld 
-
-#	$(FreeRTOS_PATH)/croutine.c
 
 C_SRCS += \
 	$(FreeRTOS_PATH)/event_groups.c \
@@ -304,57 +357,10 @@ C_SRCS += \
 	$(FreeRTOS_PATH)/portable/MemMang/heap_4.c 
 
 INC_PATH += \
-	$(PLUS_TCP_PATH)/include/ \
-	$(PLUS_TCP_PATH)/source/portable/Compiler/GCC/ \
 	$(Utilities_PATH)/include/ \
+	$(MYSOURCE_PATH)/ \
+	$(CommonUtilities_PATH)/ \
 	$(CommonUtilities_PATH)/include/
-
-C_SRCS += \
-	$(PLUS_TCP_PATH)/source/FreeRTOS_Stream_Buffer.c
-
-ifeq ($(USE_FREERTOS_PLUS),true)
-	DEFS += -DUSE_FREERTOS_PLUS=1
-	DEFS += -DipconfigDNS_USE_CALLBACKS=1
-	INC_PATH += \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/ \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/
-	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/NetworkInterface.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/x_emacpsif_dma.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/x_emacpsif_physpeed.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/x_emacpsif_hw.c \
-		$(PLUS_TCP_PATH)/source/portable/NetworkInterface/Zynq/uncached_memory.c
-	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_ARP.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_DHCP.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_IP.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_Sockets.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_IP.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_WIN.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_UDP_IP.c
-ifeq ($(ipconfigMULTI_INTERFACE),true)
-	C_SRCS += \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_Routing.c \
-		$(PLUS_TCP_PATH)/source/FreeRTOS_ND.c
-endif
-
-		# Using fixed buffers
-		C_SRCS += $(PLUS_TCP_PATH)/source/portable/BufferManagement/BufferAllocation_1.c
-
-	INC_PATH += \
-		$(PLUS_TCP_PATH)/source/EchoClients/
-endif
-
-
-ifeq ($(INCLUDE_PS7_INIT),true)
-	DEFS += -DINCLUDE_PS7_INIT=1
-	INC_PATH += \
-		$(PRJ_PATH)/MicroZed_hw_platform/
-	C_SRCS += \
-		$(PRJ_PATH)/MicroZed_hw_platform/ps7_init.c
-endif
-
 
 ifeq ($(USE_PLUS_FAT),true)
 	DEFS += -DUSE_PLUS_FAT=1
@@ -364,7 +370,7 @@ ifeq ($(USE_PLUS_FAT),true)
 
 	INC_PATH += \
 		$(PLUS_FAT_PATH)/portable/common/ \
-		$(ZYNQ_POR_TPATH)/ \
+		$(ZYNQ_PORTABLE_PATH)/ \
 		$(PLUS_FAT_PATH)/include
 	C_SRCS += \
 		$(PLUS_FAT_PATH)/ff_crc.c \
@@ -378,34 +384,89 @@ ifeq ($(USE_PLUS_FAT),true)
 		$(PLUS_FAT_PATH)/ff_string.c \
 		$(PLUS_FAT_PATH)/ff_locking.c \
 		$(PLUS_FAT_PATH)/ff_time.c \
-		$(PLUS_FAT_PATH)/portable/common/ff_ramdisk.c \
-		$(ZYNQ_POR_TPATH)/ff_sddisk.c \
-		$(ZYNQ_POR_TPATH)/xsdps_info.c \
-		$(ZYNQ_POR_TPATH)/xsdps.c \
-		$(ZYNQ_POR_TPATH)/xsdps_sinit.c \
-		$(ZYNQ_POR_TPATH)/xsdps_options.c \
-		$(ZYNQ_POR_TPATH)/xsdps_g.c \
+		$(PLUS_FAT_PATH)/portable/common/ff_ramdisk.c
+endif
+
+ifeq ($(USE_FREERTOS_PLUS),true)
+	DEFS += -DUSE_FREERTOS_PLUS=1
+	DEFS += -DipconfigDNS_USE_CALLBACKS=1
+	INC_PATH += \
+		$(NETWORK_PATH)/ \
+		$(NETWORK_PATH)/Zynq/
+	C_SRCS += \
+		$(NETWORK_PATH)/Zynq/NetworkInterface.c \
+		$(NETWORK_PATH)/Zynq/x_emacpsif_dma.c \
+		$(NETWORK_PATH)/Zynq/x_emacpsif_physpeed.c \
+		$(NETWORK_PATH)/Zynq/x_emacpsif_hw.c \
+		$(NETWORK_PATH)/Zynq/uncached_memory.c
+
+	ifeq ($(ipconfigMULTI_INTERFACE),true)
+		C_SRCS += \
+			$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_DHCPv6.c \
+			$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_BitConfig.c \
+			$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Routing.c \
+			$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_RA.c \
+			$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_ND.c
+	endif
+
+	INC_PATH += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/EchoClients/
+endif
+
+
+ifeq ($(INCLUDE_PS7_INIT),true)
+	DEFS += -DINCLUDE_PS7_INIT=1
+	INC_PATH += \
+		$(PRJ_PATH)/MicroZed_hw_platform/
+	C_SRCS += \
+		$(PRJ_PATH)/MicroZed_hw_platform/ps7_init.c
+endif
+
+
+ifeq ($(USE_PLUS_FAT),true)
+	C_SRCS += \
+		$(ZYNQ_PORTABLE_PATH)/ff_sddisk.c \
+		$(ZYNQ_PORTABLE_PATH)/xsdps_info.c \
+		$(ZYNQ_PORTABLE_PATH)/xsdps.c \
+		$(ZYNQ_PORTABLE_PATH)/xsdps_sinit.c \
+		$(ZYNQ_PORTABLE_PATH)/xsdps_options.c \
+		$(ZYNQ_PORTABLE_PATH)/xsdps_g.c \
 		$(PLUS_FAT_PATH)/ff_stdio.c \
 		$(PLUS_FAT_PATH)/ff_sys.c
 endif
 
-
 ifeq ($(ipconfigUSE_HTTP),true)
-	PROTOCOLS_PATH=$(PLUS_TCP_PATH)/source/protocols
+	PROTOCOLS_PATH=$(PLUS_TCP_PATH)/Protocols
+
 	INC_PATH += \
-		$(PROTOCOLS_PATH)/include
+		$(PROTOCOLS_PATH)/Include
 
 	C_SRCS += \
 		$(PROTOCOLS_PATH)/Common/FreeRTOS_TCP_server.c \
 		$(PROTOCOLS_PATH)/HTTP/FreeRTOS_HTTP_server.c \
 		$(PROTOCOLS_PATH)/HTTP/FreeRTOS_HTTP_commands.c \
 		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_server.c \
-		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_commands.c \
-		$(PROTOCOLS_PATH)/NTP/NTPDemo.c
+		$(PROTOCOLS_PATH)/FTP/FreeRTOS_FTP_commands.c
 endif
 
 C_SRCS += \
-	$(CommonUtilities_PATH)/date_and_time.c
+	$(TCP_UTILITIES)/date_and_time.c \
+	$(TCP_UTILITIES)/ddos_testing.c
+
+ifeq ($(USE_TCP_DEMO_CLI),true)
+	DEFS += -DUSE_TCP_DEMO_CLI=1
+	C_SRCS += \
+		$(TCP_UTILITIES)/plus_tcp_demo_cli.c
+else
+	DEFS += -DUSE_TCP_DEMO_CLI=0
+endif
+
+ifeq ($(ipconfigUSE_NTP_DEMO),true)
+	C_SRCS += \
+		$(PROTOCOLS_PATH)/NTP/NTPDemo.c
+	DEFS += -DipconfigUSE_NTP_DEMO=1
+endif
+
 
 ifeq ($(USE_TCP_TESTER),true)
 	DEFS += -DUSE_TCP_TESTER=1
@@ -416,13 +477,121 @@ endif
 
 ifeq ($(USE_LOG_EVENT),true)
 	DEFS += -D USE_LOG_EVENT=1
-	DEFS += -D LOG_EVENT_COUNT=1024
-	DEFS += -D LOG_EVENT_NAME_LEN=40
+	DEFS += -D LOG_EVENT_COUNT=200
+	DEFS += -D LOG_EVENT_NAME_LEN=20
 	DEFS += -D STATIC_LOG_MEMORY=1
-	DEFS += -D EVENT_MAY_WRAP=0
+	DEFS += -D EVENT_MAY_WRAP=1
 	C_SRCS += \
 		$(Utilities_PATH)/eventLogging.c
 endif
+
+ifeq ($(USE_PCAP),true)
+	DEFS += -D ipconfigUSE_PCAP=1
+	C_SRCS += \
+		$(TCP_UTILITIES)/win_pcap.c
+else
+	DEFS += -D ipconfigUSE_PCAP=0
+endif
+
+#	$(PRJ_PATH)/../plus/Framework/Utilities/mySprintf.c
+ifeq ($(TCP_SHORT_SOURCE_FILES),true)
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_ARP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DHCP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS_Cache.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS_Callback.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS_Networking.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_DNS_Parser.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_ICMP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_IP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_IP_Timers.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_IP_Utils.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_Sockets.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_Stream_Buffer.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_IP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_Reception.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_State_Handling.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_Transmission.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_Utils.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_TCP_WIN.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_Tiny_TCP.c \
+		$(PLUS_TCP_PATH)/source/FreeRTOS_UDP_IP.c \
+		$(PLUS_TCP_PATH)/source/portable/BufferManagement/BufferAllocation_1.c
+
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_ARP.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_DHCP.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_DNS.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_IP.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Sockets.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_Stream_Buffer.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_TCP_IP.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_TCP_WIN.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/FreeRTOS_UDP_IP.c \
+		$(PLUS_TCP_PATH)$(TCP_SOURCE)/portable/BufferManagement/BufferAllocation_1.c
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/FreeRTOS_IP_Timers.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/FreeRTOS_IP_Timers.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_IP_Utils.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_ICMP.c
+endif 
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/DNS/DNS_Cache.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/DNS/DNS_Cache.c \
+		$(PLUS_TCP_PATH)/DNS/DNS_Callback.c \
+		$(PLUS_TCP_PATH)/DNS/DNS_Networking.c \
+		$(PLUS_TCP_PATH)/DNS/DNS_Parser.c
+endif
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/FreeRTOS_DNS_Cache.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/FreeRTOS_DNS_Cache.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_DNS_Callback.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_DNS_Networking.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_DNS_Parser.c
+endif
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/FreeRTOS_TCP_Utils.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/FreeRTOS_TCP_Reception.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_TCP_State_Handling.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_TCP_Transmission.c \
+		$(PLUS_TCP_PATH)/FreeRTOS_TCP_Utils.c
+endif
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/FreeRTOS_Tiny_TCP.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/FreeRTOS_Tiny_TCP.c
+endif
+
+ifeq (,$(wildcard $(PLUS_TCP_PATH)/DNS_Cache.c))
+    # old sources before split-up
+else
+	C_SRCS += \
+		$(PLUS_TCP_PATH)/DNS_Cache.c \
+		$(PLUS_TCP_PATH)/DNS_Callback.c \
+		$(PLUS_TCP_PATH)/DNS_Networking.c \
+		$(PLUS_TCP_PATH)/DNS_Parser.c
+endif
+
+endif
+
+C_SRCS += \
+	$(ROOT_PATH)/Common/Utilities/pcap_live_player.c
 
 ifeq ($(USE_TELNET),true)
 	DEFS += -DUSE_TELNET=1
@@ -575,27 +744,23 @@ else
 	DEFS += -DCONFIG_USE_LWIP=0
 endif
 
-ifeq ($(USE_TAMAS),true)
-	DEFS += -DUSE_TAMAS=1
-INC_PATH += \
-	$(PRJ_PATH)/tamas/embedded/
-C_SRCS += \
-	$(PRJ_PATH)/tamas/embedded/tamas_main.c
-endif
-
 ifeq ($(SMALL_SIZE),true)
 	DEFS += -D ipconfigHAS_PRINTF=0
 	DEFS += -D ipconfigHAS_DEBUG_PRINTF=0
 endif
 
-# OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
-OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
+# OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
+OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
+# OPTIMIZATION = -O1 -fno-builtin-memcpy -fno-builtin-memset
 
 AS_EXTRA_FLAGS=-mfpu=neon
 
 TARGET = $(DEMO_PATH)/RTOSDemo_dbg.elf
 
-WARNINGS = -Wall -Warray-bounds=2
+WARNINGS = -Wall -Wextra -Warray-bounds -Werror=implicit-function-declaration -Wmissing-declarations
+ #-Wstrict-prototypes 
+ #-Wmissing-prototypes
+ #-Wundef
 
 DEBUG = -g3
 

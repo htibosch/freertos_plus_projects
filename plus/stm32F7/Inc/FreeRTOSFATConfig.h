@@ -291,7 +291,7 @@ the tree at a time.  For example mkdir( "/etc/settings/network", pdTRUE );.
 
 Set to 0 to use the normal mkdir() semantics (without the additional
 parameter). */
-#define	ffconfigMKDIR_RECURSIVE	 0
+#define	ffconfigMKDIR_RECURSIVE	 1
 
 /* Set to a function that will be used for all dynamic memory allocations.
 Setting to pvPortMalloc() will use the same memory allocator as FreeRTOS. */

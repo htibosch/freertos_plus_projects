@@ -89,13 +89,13 @@
 /* FreeRTOS+TCP includes. */
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
-#include "FreeRTOS_TCP_server.h"
 #include "FreeRTOS_Stream_Buffer.h"
 #include "FreeRTOS_DHCP.h"
 #if( ipconfigMULTI_INTERFACE != 0 )
 	#include "FreeRTOS_Routing.h"
 #endif
 #include "NetworkInterface.h"
+#include "NetworkBufferManagement.h"
 
 /* Demo includes. */
 #include "hr_gettime.h"
@@ -161,6 +161,9 @@ string length.  Defaults to 20 x 200 bytes. */
 	#define	iptraceUDP_LOGGING_TASK_STARTING()	do { } while( 0 )
 #endif
 /*-----------------------------------------------------------*/
+static SemaphoreHandle_t xLoggingSemaphore;
+
+   BaseType_t xGetPhyLinkStatus( void );
 
 /*
  * Called automatically to create the stream buffer.
@@ -219,6 +222,14 @@ static xSocket_t xUDPLoggingSocket = FREERTOS_INVALID_SOCKET;
 static size_t uxSkipCount = 0;
 /*-----------------------------------------------------------*/
 
+/*
+ * vUDPLoggingApplicationHook() will be called for every line of logging.
+ */
+__attribute__( ( weak ) )  void vUDPLoggingApplicationHook( const char *pcString )
+{
+	( void ) pcString;
+}
+
 static BaseType_t prvInitialiseLogging( void )
 {
 size_t xSize;
@@ -227,7 +238,7 @@ static BaseType_t xLoggingInitialised = pdFALSE;
 	if( xLoggingInitialised == pdFALSE )
 	{
 		/* Don't attempt to log unless the scheduler is running. */
-		if( xTaskGetSchedulerState() == taskSCHEDULER_RUNNING )
+		//if( xTaskGetSchedulerState() == taskSCHEDULER_RUNNING )
 		{
 			/* Create a stream buffer large enough for the maximum number of
 			bytes + 1. */ /*_RB_ Why is the size of pxStreamBuffer->ucArray
@@ -298,14 +309,23 @@ size_t xMessageLength = 0;
 
 static size_t prvBufferFormattedString( const char *pcFormatString, va_list xArgs )
 {
-size_t xLength, xSpace;
-uint64_t ullCurrentTime;
-uint32_t ulSeconds, ulMilliSeconds, ulMicroSeconds;
+	size_t xLength, xSpace;
+	uint64_t ullCurrentTime;
+	uint32_t ulSeconds, ulMilliSeconds, ulMicroSeconds;
+	SemaphoreHandle_t xSemaphore = xLoggingSemaphore;
+	TickType_t uxBLockTime = 0U;
+	const char * pcTaskName = "main";
+
+	if( xTaskGetSchedulerState() == taskSCHEDULER_RUNNING )
+	{
+		uxBLockTime = pdMS_TO_TICKS( 100U );
+		pcTaskName = pcTaskGetName( NULL );
+	}
 
 	/* Sanity check. */
 	configASSERT( pxStreamBuffer );
 
-	vTaskSuspendAll();
+	if( ( xSemaphore == NULL ) || ( xSemaphoreTake( xSemaphore, uxBLockTime ) == pdTRUE ) )
 	{
 		ullCurrentTime = ullGetHighResolutionTime();
 		ulSeconds = ( uint32_t ) ( ullCurrentTime / 1000000ull );
@@ -313,8 +333,10 @@ uint32_t ulSeconds, ulMilliSeconds, ulMicroSeconds;
 		ulMilliSeconds = ( uint32_t ) ( ullCurrentTime / 1000ull );
 		ulMicroSeconds = ( uint32_t ) ( ullCurrentTime % 1000ull );
 
-		xLength = ( size_t ) snprintf( xLogEntry.cMessage, sizeof( xLogEntry.cMessage ), "%4u.%03u.%03u [%-10s] ",
-			( unsigned int ) ulSeconds, ( unsigned int ) ulMilliSeconds, ( unsigned int ) ulMicroSeconds, pcTaskGetTaskName( NULL ) );
+		xLength = ( size_t ) snprintf( xLogEntry.cMessage, sizeof( xLogEntry.cMessage ), "%4u.%03u.%03u [%-*s] ",
+			( unsigned int ) ulSeconds, ( unsigned int ) ulMilliSeconds, ( unsigned int ) ulMicroSeconds,
+			configMAX_TASK_NAME_LEN,
+			pcTaskName );
 		xLength += ( size_t ) vsnprintf( xLogEntry.cMessage + xLength, sizeof( xLogEntry.cMessage ) - xLength, pcFormatString, xArgs );
 
 		xSpace = uxStreamBufferGetSpace( pxStreamBuffer );
@@ -324,8 +346,11 @@ uint32_t ulSeconds, ulMilliSeconds, ulMicroSeconds;
 			uxStreamBufferAdd( pxStreamBuffer, 0, ( const uint8_t * ) &xLength, sizeof( xLength ) );
 			uxStreamBufferAdd( pxStreamBuffer, 0, ( const uint8_t * ) ( xLogEntry.cMessage ), xLength );
 		}
+		if( xSemaphore != NULL )
+		{
+			xSemaphoreGive( xSemaphore );
+		}	
 	}
-	xTaskResumeAll();
 
 	if( xLoggingTask == NULL )
 	{
@@ -342,6 +367,23 @@ uint32_t ulSeconds, ulMilliSeconds, ulMicroSeconds;
 	return xLength;
 }
 /*-----------------------------------------------------------*/
+
+int lUDPLoggingVPrintf( const char *pcFormatString, va_list xArgs )
+{
+size_t xLength;
+
+	if( prvInitialiseLogging() != pdFALSE )
+	{
+		xLength = prvBufferFormattedString (pcFormatString, xArgs);
+		vUDPLoggingPost();
+	}
+	else
+	{
+		xLength = 0;
+	}
+
+	return ( int ) xLength;
+}
 
 int lUDPLoggingPrintf( const char *pcFormatString, ... )
 {
@@ -368,6 +410,10 @@ BaseType_t rc_create;
 
 void vUDPLoggingTaskCreate( void )
 {
+	if( xLoggingSemaphore == NULL )
+	{
+		xLoggingSemaphore = xSemaphoreCreateMutex();
+	}
 	/* Start a task which will send out the logging lines to a UDP address. */
 	if( xLoggingTask == NULL )
 	{
@@ -409,7 +455,7 @@ static void prvLoggingTask( void *pvParameters )
 TickType_t xBlockingTime = pdMS_TO_TICKS( logUDP_LOGGING_BLOCK_TIME_MS );
 struct freertos_sockaddr xLocalAddress;
 #if( ipconfigMULTI_INTERFACE == 0 )
-	struct freertos_sockaddr xRemoteAddress;
+	struct freertos_sockaddr xRemoteAddress = { 0 };
 #endif
 BaseType_t xSendTimeOut;
 int32_t lLines;
@@ -518,7 +564,10 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 	#endif
 		{
 			/* Check for messages in the buffer. */
-			for( lLines = 0; lLines < configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER; lLines++ )
+			for( lLines = 0;
+				 ( lLines < configUDP_LOGGING_MAX_MESSAGES_IN_BUFFER ) &&
+				 ( uxGetNumberOfFreeNetworkBuffers() > 5U );
+				 lLines++ )
 			{
 				xCount = prvGetMessageFromStreamBuffer ( cLoggingLine, sizeof( cLoggingLine ) );
 
@@ -562,9 +611,10 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 
 				#if( ipconfigMULTI_INTERFACE != 0 )
 				{
-				struct freertos_sockaddr xAddress;
-				NetworkEndPoint_t *pxEndPoint;
+					struct freertos_sockaddr xAddress;
+					NetworkEndPoint_t *pxEndPoint;
 
+					memset( &( xAddress ), 0, sizeof xAddress );
 					for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
 						pxEndPoint != NULL;
 						)
@@ -585,7 +635,9 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 							xAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_REMOTE );
 							//if( pxNextEndPoint == NULL )
 							{
-								FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xAddress, sizeof( xAddress ) );
+								BaseType_t rc = FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xAddress, sizeof( xAddress ) );
+								//configASSERT( rc == ( BaseType_t ) xCount );
+								vUDPLoggingApplicationHook( cLoggingLine );
 							}
 							break;
 						}
@@ -595,6 +647,8 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 				#else
 				{
 					FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xRemoteAddress, sizeof( xRemoteAddress ) );
+					//configASSERT( rc == ( BaseType_t ) xCount );
+					vUDPLoggingApplicationHook( cLoggingLine );
 				}
 				#endif
 				if( uxSkipCount != ( size_t )0u )
