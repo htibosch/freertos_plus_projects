@@ -24,7 +24,7 @@
  */
 
 /**
- * @file iperf_task_v3_0d.c
+ * @file iperf_task_v3_0f.c
  * @brief Implements an iperf3 server using FreeRTOS_TCP.
  */
 
@@ -178,7 +178,7 @@ typedef struct
 		eTCP_Server_Status_t eTCP_Status;
 		uint32_t ulSkipCount;
 		uint64_t ullAmount;
-		uint32_t xRemainingTime;
+		TickType_t xRemainingTime;
 		TimeOut_t xTimeOut;
 	#endif /* ipconfigIPERF_VERSION == 3 */
 	#if( ipconfigUSE_IPv6 != 0 )
@@ -290,10 +290,10 @@ static void vIPerfTCPClose( TcpClient_t *pxClient )
 
 #if( ipconfigUSE_IPv6 == 0 )
 		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );
-		FreeRTOS_printf( ( "vIPerfTCPClose: Closing server socket %s:%u after %lu bytes\n",
+		FreeRTOS_printf( ( "vIPerfTCPClose: Closing server socket %s:%u after %u bytes\n",
 			pucBuffer,
-			FreeRTOS_ntohs( pxClient->xRemoteAddr.sin_port ),
-			pxClient->ulRecvCount ) );					
+			( unsigned ) FreeRTOS_ntohs( pxClient->xRemoteAddr.sin_port ),
+			( unsigned ) pxClient->ulRecvCount ) );
 #endif
 		FreeRTOS_FD_CLR( pxClient->xServerSocket, xSocketSet, eSELECT_ALL );
 		FreeRTOS_closesocket( pxClient->xServerSocket );
@@ -491,10 +491,11 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 				}
 				if( pxClient->bits.bReverse != pdFALSE_UNSIGNED )
 				{
-					FreeRTOS_printf( ( "Reverse %d send %Lu bytes timed %d: %lu\n",
-						pxClient->bits.bReverse, pxClient->ullAmount,
+					FreeRTOS_printf( ( "Reverse %d send %u bytes timed %d: %u\n",
+						pxClient->bits.bReverse,
+						( unsigned ) pxClient->ullAmount,
 						pxClient->bits.bTimed,
-						pxClient->xRemainingTime ) );
+						( unsigned ) pxClient->xRemainingTime ) );
 				}
 			}
 			if( pxClient->ulSkipCount > ( uint32_t ) xRemaining )
@@ -536,7 +537,9 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 				( ( ( uint32_t ) pcReadBuffer[ 1 ] ) << 16 ) |
 				( ( ( uint32_t ) pcReadBuffer[ 2 ] ) <<  8 ) |
 				( ( ( uint32_t ) pcReadBuffer[ 3 ] ) <<  0 );
-			FreeRTOS_printf( ( "TCP skipcount %lu xRecvResult %ld\n", pxClient->ulSkipCount, xRemaining ) );
+			FreeRTOS_printf( ( "TCP skipcount %u xRecvResult %d\n",
+				( unsigned ) pxClient->ulSkipCount,
+				( unsigned ) xRemaining ) );
 
 			pcReadBuffer += 4;
 			xRemaining -= 4;
@@ -570,7 +573,7 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 					"\"streams\":["
 						"{"
 							"\"id\":1,"
-							"\"bytes\":%lu,"
+							"\"bytes\":%u,"
 							"\"retransmits\":-1,"
 							"\"jitter\":0,"
 							"\"errors\":0,"
@@ -578,7 +581,7 @@ FreeRTOS_printf( ( "Control string: %s\n", pcReadBuffer ) );
 						"}"
 					"]"
 				"}\xe",
-				ulCount );
+				( unsigned ) ulCount );
 			ulStore = FreeRTOS_htonl( ulLength - 1 );
 			memcpy( pcResponse, &( ulStore ), sizeof ( ulStore ) );
 				FreeRTOS_send( pxClient->xServerSocket, (const void *)pcResponse, ulLength + 4, 0 );
@@ -610,7 +613,7 @@ BaseType_t xRecvResult;
 	/* Is this a data client with the -R reverse option ? */
 	if( ( pxClient->bits.bIsControl == pdFALSE_UNSIGNED ) && ( pxClient->bits.bReverse != pdFALSE_UNSIGNED ) )
 	{
-		if( ( pxClient->bits.bTimed == pdFALSE_UNSIGNED ) && ( pxClient->bits.bHasShutdown == pdFALSE_UNSIGNED ) && ( pxClient->ullAmount == 0U ) )
+		if( ( pxClient->bits.bTimed == pdFALSE_UNSIGNED ) && ( pxClient->bits.bHasShutdown == pdFALSE_UNSIGNED ) && ( pxClient->ullAmount == ( uint64_t ) 0U ) )
 		{
 			FreeRTOS_printf( ( "Shutdown connection\n" ) );
 			FreeRTOS_shutdown( pxClient->xServerSocket, FREERTOS_SHUT_RDWR );
@@ -817,6 +820,8 @@ void vIPerfTask( void *pvParameter )
 	Socket_t xUDPServerSocket;
 #endif /* ipconfigIPERF_HAS_UDP */
 
+	char pcBuffer[ 16 ];
+
 	( void ) pvParameter;
 
 	xSocketSet = FreeRTOS_CreateSocketSet( );
@@ -838,8 +843,9 @@ void vIPerfTask( void *pvParameter )
 	#endif /* ipconfigIPERF_HAS_UDP */
 
 	FreeRTOS_printf( ( "Use for example:\n" ) );
-	FreeRTOS_printf( ( "iperf3 -c %lxip --port %u --bytes 100M [ -R ]\n",
-		FreeRTOS_htonl( FreeRTOS_GetIPAddress() ), ipconfigIPERF_UDP_ECHO_PORT ) );
+	FreeRTOS_printf( ( "iperf3 -c %s --port %u --bytes 100M [ -R ]\n",
+		FreeRTOS_inet_ntoa( FreeRTOS_GetIPAddress(), pcBuffer ),
+		ipconfigIPERF_UDP_ECHO_PORT ) );
 
 #define HUNDREDTH_MB	( ( 1024 * 1024 ) / 100 )
 	for( ;; )
