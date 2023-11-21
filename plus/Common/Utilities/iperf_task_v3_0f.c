@@ -971,7 +971,7 @@ int sscanf64( char * pcString,
 	char * pcSource = pcString;
 	uint64_t ullAmount = 0U;
 
-	if( isdigit( *pcSource ) )
+	if( isdigit( ( int ) *pcSource ) )
 	{
 		retValue = 1;
 
@@ -980,7 +980,7 @@ int sscanf64( char * pcString,
 			ullAmount = 10U * ullAmount;
 			ullAmount += ( uint64_t ) ( *pcSource - '0' );
 			pcSource++;
-		} while( isdigit( *pcSource ) );
+		} while( isdigit( ( int ) *pcSource ) );
 	}
 
 	*pullAmount = ullAmount;
