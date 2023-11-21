@@ -266,7 +266,7 @@ static void vIPerfServerWork( Socket_t xSocket )
 
 		listSET_LIST_ITEM_OWNER( &( pxClient->xListItem ), ( void * ) pxClient );
 		FreeRTOS_GetRemoteAddress( xNexSocket, ( struct freertos_sockaddr * ) &pxClient->xRemoteAddr );
-		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );
+		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_address.ulIP_IPv4, pucBuffer );
 
 		FreeRTOS_printf( ( "vIPerfTask: Received a connection from %s:%u\n",
 						   pucBuffer,
