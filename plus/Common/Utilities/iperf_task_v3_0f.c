@@ -293,9 +293,8 @@ static void vIPerfTCPClose( TcpClient_t * pxClient )
 	/* Remove server socket from the socket set. */
 	if( pxClient->xServerSocket != NULL )
 	{
-		char pucBuffer[ 16 ];
-
 		#if ( ipconfigUSE_IPv6 == 0 )
+			char pucBuffer[ 16 ];
 			FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );
 			FreeRTOS_printf( ( "vIPerfTCPClose: Closing server socket %s:%u after %u bytes\n",
 							   pucBuffer,
