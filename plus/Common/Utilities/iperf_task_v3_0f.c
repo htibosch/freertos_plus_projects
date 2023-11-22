@@ -266,7 +266,7 @@ static void vIPerfServerWork( Socket_t xSocket )
 
 		listSET_LIST_ITEM_OWNER( &( pxClient->xListItem ), ( void * ) pxClient );
 		FreeRTOS_GetRemoteAddress( xNexSocket, ( struct freertos_sockaddr * ) &pxClient->xRemoteAddr );
-		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );
+		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_address.ulIP_IPv4, pucBuffer );
 
 		FreeRTOS_printf( ( "vIPerfTask: Received a connection from %s:%u\n",
 						   pucBuffer,
@@ -293,9 +293,8 @@ static void vIPerfTCPClose( TcpClient_t * pxClient )
 	/* Remove server socket from the socket set. */
 	if( pxClient->xServerSocket != NULL )
 	{
-		char pucBuffer[ 16 ];
-
 		#if ( ipconfigUSE_IPv6 == 0 )
+			char pucBuffer[ 16 ];
 			FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );
 			FreeRTOS_printf( ( "vIPerfTCPClose: Closing server socket %s:%u after %u bytes\n",
 							   pucBuffer,
@@ -764,7 +763,7 @@ static void vIPerfTCPWork( TcpClient_t * pxClient )
 									 const struct freertos_sockaddr * pxDest )
 	{
 		( void ) pvData;
-		( void ) pxFrom;
+		( void ) pxDest;
 
 		ulUDPRecvCount += xLength;
 		#if ( ipconfigIPERF_DOES_ECHO_UDP != 0 )
@@ -972,7 +971,7 @@ int sscanf64( char * pcString,
 	char * pcSource = pcString;
 	uint64_t ullAmount = 0U;
 
-	if( isdigit( *pcSource ) )
+	if( isdigit( ( int ) *pcSource ) )
 	{
 		retValue = 1;
 
@@ -981,7 +980,7 @@ int sscanf64( char * pcString,
 			ullAmount = 10U * ullAmount;
 			ullAmount += ( uint64_t ) ( *pcSource - '0' );
 			pcSource++;
-		} while( isdigit( *pcSource ) );
+		} while( isdigit( ( int ) *pcSource ) );
 	}
 
 	*pullAmount = ullAmount;
