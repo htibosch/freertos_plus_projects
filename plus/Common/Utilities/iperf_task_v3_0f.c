@@ -146,15 +146,6 @@ void vIPerfTask( void * pvParameter );
 extern int sscanf64( char * pcString,
 					 uint64_t * pullAmount );
 
-/* As for now, still defined in 'FreeRTOS-Plus-TCP\FreeRTOS_TCP_WIN.c' : */
-extern void vListInsertGeneric( List_t * const pxList,
-								ListItem_t * const pxNewListItem,
-								MiniListItem_t * const pxWhere );
-static portINLINE void vListInsertFifo( List_t * const pxList,
-										ListItem_t * const pxNewListItem )
-{
-	vListInsertGeneric( pxList, pxNewListItem, &pxList->xListEnd );
-}
 
 #if ( ipconfigIPERF_VERSION == 3 )
 	typedef enum
@@ -274,7 +265,7 @@ static void vIPerfServerWork( Socket_t xSocket )
 
 		FreeRTOS_FD_SET( xNexSocket, xSocketSet, eSELECT_READ );
 
-		vListInsertFifo( &xTCPClientList, &( pxClient->xListItem ) );
+        vListInsertEnd( &xTCPClientList, &( pxClient->xListItem ) );
 	}
 }
 
