@@ -812,7 +812,7 @@ static void vIPerfTCPWork( TcpClient_t * pxClient )
                                      const struct freertos_sockaddr * pxDest )
     {
         ( void ) pvData;
-        ( void ) pxFrom;
+        ( void ) pxDest;
 
         ulUDPRecvCount += xLength;
         #if ( ipconfigIPERF_DOES_ECHO_UDP != 0 )
