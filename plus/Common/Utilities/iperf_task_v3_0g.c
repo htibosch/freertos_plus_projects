@@ -914,6 +914,7 @@ static void vIPerfTCPWork( TcpClient_t * pxClient )
     }
 #endif /* ipconfigIPERF_HAS_UDP */
 
+#if ( ipconfigUSE_IPv6 == 1 )
 static NetworkEndPoint_t * pxFindLocalEndpoint( void )
 {
     NetworkEndPoint_t * pxEndPoint;
@@ -935,6 +936,7 @@ static NetworkEndPoint_t * pxFindLocalEndpoint( void )
 
     return pxEndPoint;
 }
+#endif
 
 void vIPerfTask( void * pvParameter )
 {
