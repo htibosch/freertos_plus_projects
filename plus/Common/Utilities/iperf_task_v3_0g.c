@@ -72,6 +72,7 @@
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 #include "FreeRTOS_TCP_IP.h"
+#include "FreeRTOS_Routing.h"
 
 #include "iperf_task.h"
 
@@ -146,6 +147,18 @@ void vIPerfTask( void * pvParameter );
 /* It is not certain that sscanf() can handle a 64-bit number. */
 extern int sscanf64( char * pcString,
                      uint64_t * pullAmount );
+
+#if ( ipconfigIPERF_HAS_TCP != 0 )
+    static Socket_t xCreateTCPServerSocket( void );
+#endif
+
+#if ( ipconfigIPERF_HAS_UDP != 0 )
+    static Socket_t xCreateUDPServerSocket( void );
+#endif
+
+#if ( ipconfigUSE_IPv6 == 1 )
+    static NetworkEndPoint_t * pxFindLocalEndpoint( void );
+#endif
 
 static void vListInsertGeneric( List_t * const pxList,
                                 ListItem_t * const pxNewListItem,
@@ -813,6 +826,7 @@ static void vIPerfTCPWork( TcpClient_t * pxClient )
     {
         ( void ) pvData;
         ( void ) pxFrom;
+        ( void ) pxDest;
 
         ulUDPRecvCount += xLength;
         #if ( ipconfigIPERF_DOES_ECHO_UDP != 0 )
@@ -914,27 +928,29 @@ static void vIPerfTCPWork( TcpClient_t * pxClient )
     }
 #endif /* ipconfigIPERF_HAS_UDP */
 
-static NetworkEndPoint_t * pxFindLocalEndpoint( void )
-{
-    NetworkEndPoint_t * pxEndPoint;
-
-    for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
-         pxEndPoint != NULL;
-         pxEndPoint = FreeRTOS_NextEndPoint( NULL, pxEndPoint ) )
+#if ( ipconfigUSE_IPv6 == 1 )
+    static NetworkEndPoint_t * pxFindLocalEndpoint( void )
     {
-        if( pxEndPoint->bits.bIPv6 == pdTRUE_UNSIGNED )
-        {
-            IPv6_Type_t eType = xIPv6_GetIPType( &( pxEndPoint->ipv6_settings.xIPAddress ) );
+        NetworkEndPoint_t * pxEndPoint;
 
-            if( eType == eIPv6_LinkLocal )
+        for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
+             pxEndPoint != NULL;
+             pxEndPoint = FreeRTOS_NextEndPoint( NULL, pxEndPoint ) )
+        {
+            if( pxEndPoint->bits.bIPv6 == pdTRUE_UNSIGNED )
             {
-                break;
+                IPv6_Type_t eType = xIPv6_GetIPType( &( pxEndPoint->ipv6_settings.xIPAddress ) );
+
+                if( eType == eIPv6_LinkLocal )
+                {
+                    break;
+                }
             }
         }
-    }
 
-    return pxEndPoint;
-}
+        return pxEndPoint;
+    }
+#endif /* if ( ipconfigUSE_IPv6 == 1 ) */
 
 void vIPerfTask( void * pvParameter )
 {
@@ -1064,7 +1080,7 @@ int sscanf64( char * pcString,
     char * pcSource = pcString;
     uint64_t ullAmount = 0U;
 
-    if( isdigit( *pcSource ) )
+    if( isdigit( ( int ) *pcSource ) )
     {
         retValue = 1;
 
@@ -1073,7 +1089,7 @@ int sscanf64( char * pcString,
             ullAmount = 10U * ullAmount;
             ullAmount += ( uint64_t ) ( *pcSource - '0' );
             pcSource++;
-        } while( isdigit( *pcSource ) );
+        } while( isdigit( ( int ) *pcSource ) );
     }
 
     *pullAmount = ullAmount;
