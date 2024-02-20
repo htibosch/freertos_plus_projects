@@ -55,11 +55,13 @@
 	#include "FreeRTOS_ND.h"
 #endif
 
-/* FreeRTOS+FAT includes. */
-#include "ff_headers.h"
-#include "ff_stdio.h"
-#include "ff_ramdisk.h"
-#include "ff_sddisk.h"
+#if( USE_PLUS_FAT != 0 )
+	/* FreeRTOS+FAT includes. */
+	#include "ff_headers.h"
+	#include "ff_stdio.h"
+	#include "ff_ramdisk.h"
+	#include "ff_sddisk.h"
+#endif
 
 #define EXTERN_C  extern
 
@@ -83,9 +85,10 @@
 //#define __STM32_HAL_LEGACY   1
 #include "date_and_time.h"
 
-/* ST includes. */
-#include "stm32f7xx_hal.h"
-#include "stm32fxx_hal_eth.h"
+#if( USE_PLUS_FAT != 0 )
+	#include "stm32f7xx_hal.h"
+	#include "stm32fxx_hal_eth.h"
+#endif
 
 #if( USE_TCP_DEMO_CLI != 0 )
 	#include "plus_tcp_demo_cli.h"
@@ -206,8 +209,10 @@ typedef enum {
  * in all combinations. */
 eIPVersion allowIPVersion = ( eIPVersion ) ( ( uint8_t ) eIPv4 | ( uint8_t ) eIPv6 );
 
-FF_Disk_t *pxSDDisk;
-static FF_Disk_t *pxRAMDisk;
+#if( USE_PLUS_FAT != 0 )
+	FF_Disk_t *pxSDDisk;
+	static FF_Disk_t *pxRAMDisk;
+#endif
 
 static TCPServer_t *pxTCPServer = NULL;
 
@@ -236,7 +241,9 @@ static void prvCreateDiskAndExampleFiles( void );
 EXTERN_C void vStdioWithCWDTest( const char *pcMountPath );
 EXTERN_C void vCreateAndVerifyExampleFiles( const char *pcMountPath );
 
-static void check_disk_presence(void);
+#if( USE_PLUS_FAT != 0 )
+	static void check_disk_presence(void);
+#endif
 
 /*
  * The task that runs the FTP and HTTP servers.
@@ -277,8 +284,10 @@ the real network connection to use. */
 
 /* Handle of the task that runs the FTP and HTTP servers. */
 static TaskHandle_t xServerWorkTaskHandle = NULL;
-static TaskHandle_t xFTPWorkTaskHandle = NULL;
-static void prvFTPTask (void *pvParameters );
+#if( USE_PLUS_FAT != 0 )
+	static TaskHandle_t xFTPWorkTaskHandle = NULL;
+	static void prvFTPTask (void *pvParameters );
+#endif
 
 #if( ipconfigMULTI_INTERFACE != 0 )
 	NetworkInterface_t *pxSTM32Fxx_FillInterfaceDescriptor( BaseType_t xEMACIndex, NetworkInterface_t *pxInterface );
@@ -299,6 +308,90 @@ EXTERN_C void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskNa
 EXTERN_C void vApplicationTickHook( void );
 
 /*-----------------------------------------------------------*/
+
+static NetworkInterface_t xInterface;
+static NetworkEndPoint_t xEndPoints[ 4 ];
+
+#if( ipconfigMULTI_INTERFACE == 1 )
+
+#include "net_setup.h"
+
+static int setup_endpoints()
+{
+	const char * pcMACAddress = "00-11-11-11-11-47";
+
+	/* Initialise the STM32F network interface structure. */
+#if( USE_HOLDEN_INTERFACE == 1 )
+    pxSTM32_FillInterfaceDescriptor( 0, &xInterface );
+#else
+	pxSTM32Fxx_FillInterfaceDescriptor( 0, &xInterface );
+#endif
+	SetupV4_t setup_v4 =
+	{
+		.pcMACAddress = pcMACAddress,
+		.pcIPAddress = "192.168.2.108",
+		.pcMask = "255.255.255.0",
+		.pcGateway = "192.168.2.1",
+		.eType = eStatic,  /* or eDHCP if you wish. */
+//		.eType = eDHCP,
+		.pcDNS[0] = "118.98.44.10",
+		.pcDNS[1] = "118.98.44.100",
+		.pcDNS[2] = "0.0.0.0",
+	};
+
+	SetupV4_t setup_v4_second =
+	{
+		.pcMACAddress = "00-11-11-11-11-07", // pcMACAddress;
+		.pcIPAddress = "172.16.0.107",
+		.pcMask = "255.255.224.0",
+		.pcGateway = "172.16.0.1",
+		.eType = eStatic,  /* or eDHCP if you wish. */
+//		.eType = eDHCP,
+//		.pcDNS[0] = "118.98.44.10",
+//		.pcDNS[1] = "118.98.44.100",
+	};
+
+	SetupV6_t setup_v6_global =
+	{
+		.pcMACAddress = pcMACAddress,
+		//                             2600:70ff:c066::2001
+		.pcIPAddress = "2600:70ff:c066::2001",  /* create it dynamically; based on the prefix. */
+		.pcPrefix = "2600:70ff:c066::",
+		.uxPrefixLength = 64U,
+		.pcGateway = "fe80::ba27:ebff:fe5a:d751",  /* GW will be set during RA or during DHCP. */
+		.eType = eStatic,
+//		.eType = eRA,  /* Use Router Advertising. */
+//		.eType = eDHCP,  /* Use DHCPv6. */
+		.pcDNS[0] = "fe80::1",
+		.pcDNS[1] = "2001:4860:4860::8888",
+	};
+	SetupV6_t setup_v6_local =
+	{
+		.pcMACAddress = pcMACAddress,
+		.pcIPAddress = "fe80::7004",  /* A easy-to-remember link-local IP address. */
+		.pcPrefix = "fe80::",
+		.uxPrefixLength = 10U,
+		.eType = eStatic,  /* A fixed IP-address. */
+	};
+
+//	xSetupEndpoint_v4( &xInterface, &( xEndPoints[ 1 ] ), &setup_v4_second );
+	xSetupEndpoint_v4( &xInterface, &( xEndPoints[ 0 ] ), &setup_v4 );
+	xSetupEndpoint_v6( &xInterface, &( xEndPoints[ 2 ] ), &setup_v6_global );
+	xSetupEndpoint_v6( &xInterface, &( xEndPoints[ 3 ] ), &setup_v6_local );
+
+	FreeRTOS_IPInit_Multi();
+}
+#else
+static int setup_endpoints()
+{
+		const uint8_t ucIPAddress[ 4 ] = { 192, 168, 2, 114 };
+		const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
+		const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 2, 1 };
+		const uint8_t ucDNSServerAddress[ 4 ] = { 118, 98, 44, 10 };
+//		const uint8_t ucDNSServerAddress[ 4 ] = { 203, 130, 196, 6 };
+		FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
+}
+#endif
 
 EXTERN_C int main( void );
 int main( void )
@@ -351,132 +444,8 @@ uint32_t ulSeed;
 	are used if ipconfigUSE_DHCP is set to 0, or if ipconfigUSE_DHCP is set to 1
 	but a DHCP server cannot be	contacted. */
 
-#if( ipconfigMULTI_INTERFACE == 0 )
-	/* Call it later in a task. */
-//	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
-#else
-	pxSTM32Fxx_FillInterfaceDescriptor( 0, &( xInterfaces[ 0 ] ) );
+	setup_endpoints();
 
-	/*
-	 * End-point-1  // private + public
-	 *     Network: 192.168.2.x/24
-	 *     IPv4   : 192.168.2.12
-	 *     Gateway: 192.168.2.1 ( NAT router )
-	 */
-	NetworkEndPoint_t *pxEndPoint_0 = &( xEndPoints[ 0 ] );
-	NetworkEndPoint_t *pxEndPoint_1 = &( xEndPoints[ 1 ] );
-	NetworkEndPoint_t *pxEndPoint_2 = &( xEndPoints[ 2 ] );
-//	NetworkEndPoint_t *7 = &( xEndPoints[ 3 ] );
-	{
-		const uint8_t ucIPAddress[ 4 ]        = { 192, 168,   2, 127 };
-		const uint8_t ucNetMask[ 4 ]          = { 255, 255, 255, 0   };
-		const uint8_t ucGatewayAddress[ 4 ]   = { 192, 168,   2,   1 };
-		const uint8_t ucDNSServerAddress[ 4 ] = { 118,  98,  44, 100 };
-
-		FreeRTOS_FillEndPoint( &( xInterfaces[0] ), pxEndPoint_0, ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress1 );
-		#if( ipconfigUSE_DHCP != 0 )
-		{
-			pxEndPoint_0->bits.bWantDHCP = pdTRUE;	//	pdTRUE;
-		}
-		#endif	/* ( ipconfigUSE_DHCP != 0 ) */
-	}
-#warning please include this end-point again.
-//	{
-//		const uint8_t ucIPAddress[]        = { 172,  16,   0, 114 };
-//		const uint8_t ucNetMask[]          = { 255, 255,   0,   0};
-//		const uint8_t ucGatewayAddress[]   = {   0,   0,   0,   0};
-//		const uint8_t ucDNSServerAddress[] = {   0,   0,   0,   0};
-//		FreeRTOS_FillEndPoint( &( xInterfaces[0] ), pxEndPoint_3, ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress1 );
-//	}
-
-
-	#if( ipconfigUSE_IPv6 != 0 )
-	{
-		/*
-		 * End-point-2  // private
-		 *     Network: fe80::/10 (link-local)
-		 *     IPv6   : fe80::d80e:95cc:3154:b76a/128
-		 *     Gateway: -
-		*/
-		{
-			IPv6_Address_t xIPAddress;
-			IPv6_Address_t xPrefix;
-			// a573:8::5000:0:d8ff:120
-			// a8ff:120::593b:200:d8af:20
-
-			FreeRTOS_inet_pton6( "fe80::", xPrefix.ucBytes );
-//			FreeRTOS_inet_pton6( "2001:470:ec54::", xPrefix.ucBytes );
-
-//			Take a random IP-address
-//			FreeRTOS_CreateIPv6Address( &xIPAddress, &xPrefix, 64, pdTRUE );
-
-//			Take a fixed IP-address, which is easier for testing.
-			//FreeRTOS_inet_pton6( "fe80::b865:6c00:6615:6e50", xIPAddress.ucBytes );
-			FreeRTOS_inet_pton6( "fe80::7007", xIPAddress.ucBytes );
-
-			FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[0] ), 
-										pxEndPoint_1,
-										&( xIPAddress ),
-										&( xPrefix ),
-										64uL,			/* Prefix length. */
-										NULL,			/* No gateway */
-										NULL,			/* pxDNSServerAddress: Not used yet. */
-										ucMACAddress1 );
-		}
-		/*
-		 * End-point-3  // public
-		 *     Network: 2001:470:ec54::/64
-		 *     IPv6   : 2001:470:ec54::4514:89d5:4589:8b79/128
-		 *     Gateway: fe80::9355:69c7:585a:afe7  // obtained from Router Advertisement
-		*/
-		{
-			IPv6_Address_t xIPAddress;
-			IPv6_Address_t xPrefix;
-			IPv6_Address_t xGateWay;
-			IPv6_Address_t xDNSServer;
-
-			FreeRTOS_inet_pton6( "2001:470:ec54::",           xPrefix.ucBytes );
-			FreeRTOS_inet_pton6( "2001:4860:4860::8888",      xDNSServer.ucBytes );			
-
-			FreeRTOS_CreateIPv6Address( &xIPAddress, &xPrefix, 64, pdTRUE );
-			FreeRTOS_inet_pton6( "fe80::9355:69c7:585a:afe7", xGateWay.ucBytes );
-
-			FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[0] ), 
-										pxEndPoint_2,
-										&( xIPAddress ),
-										&( xPrefix ),
-										64uL,				/* Prefix length. */
-										&( xGateWay ),
-										&( xDNSServer ),	/* pxDNSServerAddress: Not used yet. */
-										ucMACAddress1 );
-			#if( ipconfigUSE_RA != 0 )
-			{
-				pxEndPoint_2->bits.bWantRA = pdTRUE_UNSIGNED;
-			}
-			#endif /* #if( ipconfigUSE_RA != 0 ) */
-			#if( ipconfigUSE_DHCPv6 != 0 )
-		{
-				pxEndPoint_2->bits.bWantDHCP = pdTRUE;
-			}
-			#endif	/* ( ipconfigUSE_DHCP != 0 ) */
-		}
-	}
-	#endif
-
-//	FreeRTOS_IPStart();
-#endif /* ipconfigMULTI_INTERFACE */
-
-#if( ipconfigMULTI_INTERFACE == 0 )
-	const uint8_t ucIPAddress[ 4 ]        = { 192, 168,   2, 127 };
-	const uint8_t ucNetMask[ 4 ]          = { 255, 255, 255,   0 };
-	const uint8_t ucGatewayAddress[ 4 ]   = { 192, 168,   2,   1 };
-	const uint8_t ucDNSServerAddress[ 4 ] = { 118,  98,  44, 100 };
-	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
-//	const uint8_t ucZeros[ 4 ] = { 0, 0, 0, 0 };
-//	FreeRTOS_IPInit( ucZeros, ucZeros, ucZeros, ucZeros, ucMACAddress );
-#else
-	FreeRTOS_IPStart();
-#endif
 	/* Create the task that handles the FTP and HTTP servers.  This will
 	initialise the file system then wait for a notification from the network
 	event hook before creating the servers.  The task is created at the idle
@@ -539,10 +508,11 @@ uint32_t ulValue;
 	return xReturn;
 }
 
+#if( USE_PLUS_FAT != 0 )
 static void prvCreateDiskAndExampleFiles( void )
 {
 	verboseLevel = 0;
-	#if( mainHAS_RAMDISK != 0 )
+	#if( USE_PLUS_FAT != 0 ) && ( mainHAS_RAMDISK != 0 )
 	{
 		static uint8_t * pucRAMDiskSpace = NULL;
 		if( pucRAMDiskSpace == NULL )
@@ -592,10 +562,12 @@ static void prvCreateDiskAndExampleFiles( void )
 	}
 	#endif	/* mainHAS_SDCARD */
 }
+#endif /* ( USE_PLUS_FAT != 0 ) */
 /*-----------------------------------------------------------*/
 
 #if( ( mainCREATE_FTP_SERVER == 1 ) || ( mainCREATE_HTTP_SERVER == 1 ) )
 
+#if( USE_PLUS_FAT != 0 )
 	static int iFATRunning = 0;
 
 	static void prvFileSystemAccessTask( void *pvParameters )
@@ -612,6 +584,7 @@ static void prvCreateDiskAndExampleFiles( void )
 		FreeRTOS_printf( ( "%s: done\n", pcBasePath ) );
 		vTaskDelete( NULL );
 	}
+#endif
 
 #if ( USE_TELNET != 0 )
 	Telnet_t * pxTelnetHandle = NULL;
@@ -827,9 +800,11 @@ static void prvCreateDiskAndExampleFiles( void )
 		FreeRTOS_printf( ( "Creating files\n" ) );
 
 		/* Create the disk used by the FTP and HTTP servers. */
-		prvCreateDiskAndExampleFiles();
-		BaseType_t xIsPresent = FF_SDDiskDetect( pxSDDisk );
-		FreeRTOS_printf( ( "FF_SDDiskDetect returns -> %d\n", ( int ) xIsPresent  ) );
+		#if( USE_PLUS_FAT != 0 )
+			prvCreateDiskAndExampleFiles();
+			BaseType_t xIsPresent = FF_SDDiskDetect( pxSDDisk );
+			FreeRTOS_printf( ( "FF_SDDiskDetect returns -> %d\n", ( int ) xIsPresent  ) );
+		#endif
 
 		/* The priority of this task can be raised now the disk has been
 		initialised. */
@@ -840,8 +815,10 @@ static void prvCreateDiskAndExampleFiles( void )
 //		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
 
 		/* Create the servers defined by the xServerConfiguration array above. */
-		pxTCPServer = FreeRTOS_CreateTCPServer( xServerConfiguration, sizeof( xServerConfiguration ) / sizeof( xServerConfiguration[ 0 ] ) );
-		configASSERT( pxTCPServer );
+		#if( USE_PLUS_FAT != 0 )
+			pxTCPServer = FreeRTOS_CreateTCPServer( xServerConfiguration, sizeof( xServerConfiguration ) / sizeof( xServerConfiguration[ 0 ] ) );
+			configASSERT( pxTCPServer );
+		#endif
 
 		#if( CONFIG_USE_LWIP != 0 )
 		{
@@ -862,8 +839,10 @@ static void prvCreateDiskAndExampleFiles( void )
 			if (xStartServices == EStartupStart) {
 				xStartServices = EStartupStarted;
 				strcpy( pcBuffer, "ntp" );
+#if( USE_PLUS_FAT != 0 )
 				xHandleTestingCommand( pcBuffer, sizeof pcBuffer );
 				xTaskCreate( prvFTPTask, "FTP-task", mainFAT_SERVER_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &xFTPWorkTaskHandle );
+#endif
 			}
 			/* tcpServerWork() is yet another test. */
 			tcpServerWork();
@@ -981,6 +960,7 @@ static void prvCreateDiskAndExampleFiles( void )
 #endif /* ( ( mainCREATE_FTP_SERVER == 1 ) || ( mainCREATE_HTTP_SERVER == 1 ) ) */
 /*-----------------------------------------------------------*/
 
+#if( USE_PLUS_FAT != 0 )
 static void check_disk_presence()
 {
     /* Check if the SD-card was inserted or extracted. */
@@ -1021,6 +1001,7 @@ static void check_disk_presence()
 		xWasPresent = xIsPresent;
 	}
 }
+#endif /* #if( USE_PLUS_FAT != 0 ) */
 
 typedef struct xParameters
 {
@@ -1580,7 +1561,7 @@ taskEXIT_CRITICAL();
 
 #if( ipconfigMULTI_INTERFACE != 0 )
 #warning Multi
-	EXTERN_C BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t *pxEndPoint, const char *pcName )
+	EXTERN_C BaseType_t xApplicationDNSQueryHook_Multi( NetworkEndPoint_t *pxEndPoint, const char *pcName )
 #else
 #warning Single
 	EXTERN_C BaseType_t xApplicationDNSQueryHook( const char *pcName )
@@ -1682,7 +1663,7 @@ BaseType_t xReturn;
 /* Called by FreeRTOS+TCP when the network connects or disconnects.  Disconnect
 events are only received if implemented in the MAC driver. */
 #if( ipconfigMULTI_INTERFACE != 0 )
-	void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent, NetworkEndPoint_t *pxEndPoint )
+	void vApplicationIPNetworkEventHook_Multi( eIPCallbackEvent_t eNetworkEvent, NetworkEndPoint_t *pxEndPoint )
 #else
 	void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
 #endif
@@ -1748,21 +1729,9 @@ static BaseType_t xTasksAlreadyCreated = pdFALSE;
 		#else
 		{
 			/* Print out the network configuration, which may have come from a DHCP
-			server. */
-			FreeRTOS_printf( ( "IP-address : %lxip (default %lxip)\n",
-				FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulIPAddress ), FreeRTOS_ntohl( pxEndPoint->ipv4_defaults.ulIPAddress ) ) );
-			FreeRTOS_printf( ( "Net mask   : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulNetMask ) ) );
-			FreeRTOS_printf( ( "GW         : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulGatewayAddress ) ) );
-			FreeRTOS_printf( ( "DNS        : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulDNSServerAddresses[ 0 ] ) ) );
-			FreeRTOS_printf( ( "Broadcast  : %lxip\n", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulBroadcastAddress ) ) );
-			FreeRTOS_printf( ( "MAC address: %02x-%02x-%02x-%02x-%02x-%02x\n",
-				pxEndPoint->xMACAddress.ucBytes[ 0 ],
-				pxEndPoint->xMACAddress.ucBytes[ 1 ],
-				pxEndPoint->xMACAddress.ucBytes[ 2 ],
-				pxEndPoint->xMACAddress.ucBytes[ 3 ],
-				pxEndPoint->xMACAddress.ucBytes[ 4 ],
-				pxEndPoint->xMACAddress.ucBytes[ 5 ] ) );
-			FreeRTOS_printf( ( " \n" ) );
+                 Print out the network configuration, which may have come from a DHCP
+                 * server. */
+                showEndPoint( pxEndPoint );
 		}
 		#endif /* ipconfigMULTI_INTERFACE */
 	}
@@ -1804,7 +1773,7 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 extern const char *pcApplicationHostnameHook( void );
 
 #if( ipconfigMULTI_INTERFACE != 0 )
-	BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t *pxEndPoint, const char *pcName );
+	BaseType_t xApplicationDNSQueryHook_Multi( NetworkEndPoint_t *pxEndPoint, const char *pcName );
 #else
 	BaseType_t xApplicationDNSQueryHook( const char *pcName );
 #endif
@@ -2253,6 +2222,7 @@ void tcpServerWork()
 	}
 }
 
+#if( USE_PLUS_FAT != 0 )
 static void prvFTPTask (void *pvParameters )
 {
 	for (;; )
@@ -2272,6 +2242,7 @@ static void prvFTPTask (void *pvParameters )
 		}
 	}
 }
+#endif
 
 uint32_t ulApplicationGetNextSequenceNumber(
     uint32_t ulSourceAddress,
@@ -2551,6 +2522,62 @@ time_t time ( time_t *puxTime )
 void sdcard_test(void);
 void sdcard_test(void)
 {
+}
+
+void handle_user_test( char * pcBuffer )
+{
+    ( void ) pcBuffer;
+    FreeRTOS_printf( ( "handle_user_test: called\n" ) );
+}
+
+void show_single_addressinfo( const char * pcFormat,
+							  const struct freertos_addrinfo * pxAddress )
+{
+	char cBuffer[ 40 ];
+	const uint8_t * pucAddress;
+
+	#if ( ipconfigUSE_IPv6 != 0 )
+		if( pxAddress->ai_family == FREERTOS_AF_INET6 )
+		{
+			pucAddress = pxAddress->ai_addr->sin_address.xIP_IPv6.ucBytes;
+		}
+		else
+	#endif /* ( ipconfigUSE_IPv6 != 0 ) */
+	{
+		pucAddress = ( const uint8_t * ) &( pxAddress->ai_addr->sin_address );
+	}
+
+	( void ) FreeRTOS_inet_ntop( pxAddress->ai_family, ( const void * ) pucAddress, cBuffer, sizeof( cBuffer ) );
+
+	if( pcFormat != NULL )
+	{
+		FreeRTOS_printf( ( pcFormat, cBuffer ) );
+	}
+	else
+	{
+		FreeRTOS_printf( ( "Address: %s\n", cBuffer ) );
+	}
+}
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief For testing purposes: print a list of DNS replies.
+ * @param[in] pxAddress: The first reply received ( or NULL )
+ */
+void show_addressinfo( const struct freertos_addrinfo * pxAddress )
+{
+	const struct freertos_addrinfo * ptr = pxAddress;
+	BaseType_t xIndex = 0;
+
+	while( ptr != NULL )
+	{
+		show_single_addressinfo( "Found Address: %s", ptr );
+
+		ptr = ptr->ai_next;
+	}
+
+	/* In case the function 'FreeRTOS_printf()` is not implemented. */
+	( void ) xIndex;
 }
 
 void HAL_SD_MspInit( SD_HandleTypeDef * hsd )

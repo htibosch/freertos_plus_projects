@@ -622,6 +622,7 @@ if( xStatus == EStatusAsking )
 						FreeRTOS_printf( ( "Sending UDP message to %pip:%u\n",
 										   xIPAddressFound.sin_address.xIP_IPv6.ucBytes,
 										   FreeRTOS_ntohs( xIPAddressFound.sin_port ) ) );
+						xIPAddressFound.sin_family = FREERTOS_AF_INET6;
 
 						FreeRTOS_sendto( xNTP_UDPSocket,
 										 ( void * ) &xNTPPacket, sizeof( xNTPPacket ),
@@ -634,6 +635,7 @@ if( xStatus == EStatusAsking )
 				{
 					xAddress.sin_address.ulIP_IPv4 = ulIPAddressFound;
 					xAddress.sin_port = FreeRTOS_htons( NTP_PORT );
+					xAddress.sin_family = FREERTOS_AF_INET4;
 
 					FreeRTOS_printf( ( "Sending UDP message to %xip:%u\n",
 									   ( unsigned ) FreeRTOS_ntohl( xAddress.sin_address.ulIP_IPv4 ),

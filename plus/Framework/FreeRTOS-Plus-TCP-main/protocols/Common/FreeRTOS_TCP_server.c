@@ -94,7 +94,7 @@
 
 						if( xSocket != FREERTOS_NO_SOCKET )
 						{
-							xAddress.sin_addr = FreeRTOS_GetIPAddress(); /* Single NIC, currently not used */
+							xAddress.sin_address.ulIP_IPv4 = FreeRTOS_GetIPAddress(); /* Single NIC, currently not used */
 							xAddress.sin_port = FreeRTOS_htons( xPortNumber );
 
 							FreeRTOS_bind( xSocket, &xAddress, sizeof( xAddress ) );

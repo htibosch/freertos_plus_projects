@@ -381,7 +381,7 @@ messages. */
 
 #define ipconfigETHERNET_MINIMUM_PACKET_BYTES		( 60 )
 
-#define ipconfigENDPOINT_DNS_ADDRESS_COUNT		( 2 )
+#define ipconfigENDPOINT_DNS_ADDRESS_COUNT		( 4 )
 
 #define configTCP_ECHO_CLIENT_PORT				( 32002 )
 

@@ -636,11 +636,9 @@
 					{
 						uint32_t ulIP;
 						uint16_t ulPort;
-						#if ( ipconfigUSE_IPv6 != 0 )
-							struct freertos_sockaddr6 xLocalAddress, xRemoteAddress;
-							FreeRTOS_Socket_t * pxTransferSocket = ( FreeRTOS_Socket_t * ) pxClient->xTransferSocket;
-						#else
 							struct freertos_sockaddr xLocalAddress, xRemoteAddress;
+						#if ( ipconfigUSE_IPv6 != 0 )
+							FreeRTOS_Socket_t * pxTransferSocket = ( FreeRTOS_Socket_t * ) pxClient->xTransferSocket;
 						#endif
 						struct freertos_sockaddr * pxLocalAddressIPv4 = ( struct freertos_sockaddr * ) &xLocalAddress;
 						struct freertos_sockaddr * pxRemoteAddressIPv4 = ( struct freertos_sockaddr * ) &xRemoteAddress;
@@ -659,13 +657,13 @@
 
 						FreeRTOS_GetRemoteAddress( pxClient->xSocket, pxRemoteAddressIPv4 );
 
-						ulIP = FreeRTOS_ntohl( pxLocalAddressIPv4->sin_addr );
+						ulIP = FreeRTOS_ntohl( pxLocalAddressIPv4->sin_address.ulIP_IPv4 );
 						#if ( ipconfigUSE_IPv6 != 0 )
 							{
 								FreeRTOS_printf( ( "Local address %xip bIsIPv6 %d\n", ( unsigned ) ulIP, ( int ) pxTransferSocket->bits.bIsIPv6 ) );
 							}
 						#endif /* ipconfigUSE_IPv6 */
-						pxClient->ulClientIPv4 = FreeRTOS_ntohl( pxRemoteAddressIPv4->sin_addr );
+						pxClient->ulClientIPv4 = FreeRTOS_ntohl( pxRemoteAddressIPv4->sin_address.ulIP_IPv4 );
 						ulPort = FreeRTOS_ntohs( xLocalAddress.sin_port );
 
 						pxClient->usClientPort = FreeRTOS_ntohs( xRemoteAddress.sin_port );
@@ -985,12 +983,11 @@
 		if( xSocketValid( xSocket ) == pdTRUE )
 		{
 			BaseType_t xSmallTimeout = pdMS_TO_TICKS( 100 );
+			struct freertos_sockaddr xBindAddress, xRemote;
 			#if ( ipconfigUSE_IPv6 != 0 )
-				struct freertos_sockaddr6 xBindAddress, xRemote, xLocal2;
-				const uint8_t sin_family = FreeRTOS_GetIPType( xSocket ) == ipTYPE_IPv6 ? FREERTOS_AF_INET6 : FREERTOS_AF_INET;
+				const uint8_t sin_family = FreeRTOS_GetIPType( xSocket ) == ipTYPE_IPv6 ? FREERTOS_AF_INET6 : FREERTOS_AF_INET4;
 /*	const uint8_t sin_family = FREERTOS_AF_INET6; */
 			#else
-				struct freertos_sockaddr xBindAddress, xRemote, xLocal2;
 				const uint8_t sin_family = FREERTOS_AF_INET;
 			#endif
 			struct freertos_sockaddr * pxBindAddress = ( struct freertos_sockaddr * ) &xBindAddress;
@@ -1009,7 +1006,7 @@
 			if( pxEndPoint == NULL )
 			{
 				FreeRTOS_printf( ( "prvTransferConnect: No pxEndPoint yet???\n" ) );
-				pxEndPoint = FreeRTOS_FindEndPointOnNetMask( pxRemote->sin_addr, 12 );
+				pxEndPoint = FreeRTOS_FindEndPointOnNetMask( pxRemote->sin_address.ulIP_IPv4, 12 );
 			}
 
 			if( pxEndPoint != NULL )
@@ -1017,16 +1014,16 @@
 				/* Let the new socket use the same end-point. */
 				vSetSocketEndpoint( xSocket, pxEndPoint );
 
-				pxBindAddress->sin_addr = pxEndPoint->ipv4_settings.ulIPAddress;
+				pxBindAddress->sin_address.ulIP_IPv4 = pxEndPoint->ipv4_settings.ulIPAddress;
 				#if ( ipconfigUSE_IPv6 != 0 )
 					{
-						( void ) memcpy( xBindAddress.sin_addrv6.ucBytes, pxEndPoint->ipv6_settings.xIPAddress.ucBytes, sizeof( xBindAddress.sin_addrv6.ucBytes ) );
+						( void ) memcpy( xBindAddress.sin_address.xIP_IPv6.ucBytes, pxEndPoint->ipv6_settings.xIPAddress.ucBytes, sizeof( xBindAddress.sin_address.xIP_IPv6.ucBytes ) );
 					}
 				#endif /* ipconfigUSE_IPv6 */
 			}
 			else
 			{
-				pxBindAddress->sin_addr = 0ul;
+				pxBindAddress->sin_address.ulIP_IPv4 = 0ul;
 			}
 
 			xBindAddress.sin_port = FreeRTOS_htons( 0 ); /* Bind to any available port number. */
@@ -1101,16 +1098,12 @@
 		}
 		else
 		{
-			#if ( ipconfigUSE_IPv6 != 0 )
-				struct freertos_sockaddr6 xAddress;
-			#else
-				struct freertos_sockaddr xAddress;
-			#endif
+			struct freertos_sockaddr xAddress;
 			#if ( ipconfigUSE_IPv6 != 0 )
 				if( pxClient->ulClientIPv4 == 0ul )
 				{
 					xAddress.sin_family = FREERTOS_AF_INET6;
-					( void ) memcpy( xAddress.sin_addrv6.ucBytes, pxClient->ulClientIPv6.ucBytes, sizeof xAddress.sin_addrv6.ucBytes );
+					( void ) memcpy( xAddress.sin_address.xIP_IPv6.ucBytes, pxClient->ulClientIPv6.ucBytes, sizeof xAddress.sin_address.xIP_IPv6.ucBytes );
 				}
 				else
 			#endif
@@ -1118,7 +1111,7 @@
 				struct freertos_sockaddr * pxAddress = ( struct freertos_sockaddr * ) &xAddress;
 
 				pxAddress->sin_family = FREERTOS_AF_INET;
-				pxAddress->sin_addr = FreeRTOS_htonl( pxClient->ulClientIPv4 );
+				pxAddress->sin_address.ulIP_IPv4 = FreeRTOS_htonl( pxClient->ulClientIPv4 );
 			}
 
 			xAddress.sin_port = FreeRTOS_htons( pxClient->usClientPort );
@@ -1171,11 +1164,7 @@
 					pxClient->bits1.bEmptyFile = pdFALSE_UNSIGNED;
 					#if ( ipconfigHAS_PRINTF != 0 )
 						{
-							#if ( ipconfigUSE_IPv6 != 0 )
-								struct freertos_sockaddr6 xRemoteAddress, xLocalAddress;
-							#else
-								struct freertos_sockaddr xRemoteAddress, xLocalAddress;
-							#endif
+							struct freertos_sockaddr xRemoteAddress, xLocalAddress;
 							FreeRTOS_GetRemoteAddress( pxClient->xTransferSocket, &xRemoteAddress );
 
 							FreeRTOS_GetLocalAddress( pxClient->xTransferSocket, &xLocalAddress );
@@ -1198,11 +1187,7 @@
 			{
 				BaseType_t xLength;
 				BaseType_t xRemotePort;
-				#if ( ipconfigUSE_IPv6 != 0 )
-					struct freertos_sockaddr6 xRemoteAddress;
-				#else
-					struct freertos_sockaddr xRemoteAddress;
-				#endif
+				struct freertos_sockaddr xRemoteAddress;
 			#if( ipconfigUSE_IPv6 != 0 )
 				FreeRTOS_GetRemoteAddress( pxClient->xTransferSocket, ( struct freertos_sockaddr6 * ) &xRemoteAddress );
 			#else

@@ -3,6 +3,7 @@
 #
 
 ipconfigMULTI_INTERFACE=true
+ipconfigUSE_IPv4=true
 ipconfigUSE_IPv6=true
 
 GCC_BIN=C:/Ac6_v2.9/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.win32_1.17.0.201812190825/tools/compiler/bin
@@ -92,7 +93,9 @@ DEFS += -DHEAP_IN_SDRAM=0
 LD_EXTRA_FLAGS =
 
 FREERTOS_ROOT = \
-	$(ROOT_PATH)/framework/FreeRTOS_v9.0.0
+	$(ROOT_PATH)/framework/FreeRTOS_V10.6.2
+
+#	$(ROOT_PATH)/framework/FreeRTOS_v9.0.0
 #	$(ROOT_PATH)/framework/FreeRTOS_V10.5.1
 
 FREERTOS_PORT_PATH = \
@@ -108,12 +111,12 @@ ifeq ($(ipconfigMULTI_INTERFACE),true)
 	DEFS += -D ipconfigMULTI_INTERFACE=1
 	DEFS += -D ipconfigUSE_LOOPBACK=1
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-multi.v2.3.1
+		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-main
 else
 	DEFS += -D ipconfigMULTI_INTERFACE=0
 	ipconfigUSE_IPv6=false
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP.v2.3.4
+		$(ROOT_PATH)/framework/FreeRTOS-Plus-TCP-main
 endif
 
 ifeq (,$(wildcard $(PLUS_TCP_PATH)/source/FreeRTOS_IP.c))
@@ -141,6 +144,11 @@ ifeq ($(ipconfigUSE_IPv6),true)
 	DEFS += -D ipconfigUSE_IPv6=1
 else
 	DEFS += -D ipconfigUSE_IPv6=0
+endif
+ifeq ($(ipconfigUSE_IPv4),true)
+	DEFS += -D ipconfigUSE_IPv4=1
+else
+	DEFS += -D ipconfigUSE_IPv4=0
 endif
 
 INC_PATH = \
@@ -459,6 +467,9 @@ ifeq ($(USE_TCP_DEMO_CLI),true)
 else
 	DEFS += -DUSE_TCP_DEMO_CLI=0
 endif
+
+C_SRCS += \
+	$(TCP_UTILITIES)/net_setup.c
 
 C_SRCS += \
 	$(PRJ_PATH)/$(ST_Library)/source/stm32f7xx_hal.c \
