@@ -339,8 +339,6 @@ Socket_t xUDPServerSocket = NULL;
 extern void vStdioWithCWDTest( const char * pcMountPath );
 extern void vCreateAndVerifyExampleFiles( const char * pcMountPath );
 
-static void checksum_test();
-
 #if ( ipconfigUSE_CALLBACKS != 0 )
 	static BaseType_t xOnUdpReceive( Socket_t xSocket,
 									 void * pvData,
@@ -1395,16 +1393,16 @@ static BaseType_t vHandleOtherCommand( Socket_t xSocket,
 				char * tail = ptr;
 				int rc = sscanf( ptr, "%d%c%d", &iDoStart, &ch, &value2 );
 
-				while( *tail && !isspace( *tail ) )
+				while( *tail && !isspace( ( int ) *tail ) )
 				{
 					tail++;
 				}
 
-				if( isspace( *tail ) )
+				if( isspace( ( int ) *tail ) )
 				{
 					*( tail++ ) = 0;
 
-					while( isspace( *tail ) )
+					while( isspace( ( int ) *tail ) )
 					{
 						tail++;
 					}
@@ -1621,7 +1619,7 @@ static BaseType_t vHandleOtherCommand( Socket_t xSocket,
 			BaseType_t useChecksum = pdTRUE;
 			char * ptr = pcBuffer + 7;
 
-			while( isspace( *ptr ) )
+			while( isspace( ( int ) *ptr ) )
 			{
 				ptr++;
 			}
@@ -1673,12 +1671,12 @@ static BaseType_t vHandleOtherCommand( Socket_t xSocket,
 		const char pcMessage[] = "1234567890";
 		const char * ptr = pcBuffer + 3;
 
-		while( *ptr && !isspace( *ptr ) )
+		while( *ptr && !isspace( ( int ) *ptr ) )
 		{
 			ptr++;
 		}
 
-		while( isspace( *ptr ) )
+		while( isspace( ( int ) *ptr ) )
 		{
 			ptr++;
 		}
@@ -3002,7 +3000,7 @@ const char * pcApplicationHostnameHook( void )
 		}
 		else
 		{
-			FreeRTOS_printf( ( "%s address %xip\n", xDone ? "Success" : "Failed", FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulIPAddress ) ) );
+			FreeRTOS_printf( ( "%s address %xip\n", xDone ? "Success" : "Failed", ( unsigned ) FreeRTOS_ntohl( pxEndPoint->ipv4_settings.ulIPAddress ) ) );
 		}
 
 		return xDone;
@@ -3010,14 +3008,6 @@ const char * pcApplicationHostnameHook( void )
 #endif /* ( ipconfigMULTI_INTERFACE != 0 ) */
 
 /*-----------------------------------------------------------*/
-
-#if ( ipconfigUSE_LLMNR != 0 )
-	#warning Has LLMNR
-#endif
-
-#if ( ipconfigUSE_NBNS != 0 )
-	#warning Has NBNS
-#endif
 
 #if ( ipconfigMULTI_INTERFACE != 0 )
 	BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t * pxEndPoint,
@@ -3847,79 +3837,6 @@ void printf_test()
 /*		logPrintf("%lu", uxSize); // argument 2 has type 'unsigned int' */
 }
 
-int debug_crc;
-void checksum_test( void );
-void checksum_test( void )
-{
-#define PACKET_BUFFER_SIZE    1024
-	char * pcBuffer = pvPortMalloc( PACKET_BUFFER_SIZE );
-	configASSERT( pcBuffer != NULL );
-	int i, offset;
-	debug_crc = 1;
-	FreeRTOS_printf( ( "           ETH + IP + PR   =  Tot (  IP  ->  IP  ) TCP  -> TCP\n" ) );
-
-	for( offset = 0; offset < 4; offset++ )
-	{
-		for( i = 0; i < ARRAY_SIZE( packets ); i++ )
-		{
-			uint16_t usChecksum_IP, usChecksum_TCP, usChecksum_IP_2, usChecksum_TCP_2;
-			IPHeader_t * pxIPHeader_IPv4;
-			ProtocolHeaders_t * pxProtocolHeaders;
-			int count = packets[ i ].uxLength;
-			BaseType_t xIPHeaderLength;
-			uint8_t * pucEthernetBuffer = ( uint8_t * ) ( pcBuffer + offset );
-			configASSERT( count < PACKET_BUFFER_SIZE - 4 );
-			memcpy( pucEthernetBuffer, packets[ i ].pucBytes, count );
-
-			pxIPHeader_IPv4 = ( IPHeader_t * ) &( pucEthernetBuffer[ ipSIZE_OF_ETH_HEADER ] );
-			xIPHeaderLength = sizeof( uint32_t ) * ( pxIPHeader_IPv4->ucVersionHeaderLength & 0x0F );
-			pxProtocolHeaders = ( ProtocolHeaders_t * ) ( pucEthernetBuffer + ipSIZE_OF_ETH_HEADER + xIPHeaderLength );
-
-			usChecksum_IP = pxIPHeader_IPv4->usHeaderChecksum;
-			usChecksum_TCP = pxProtocolHeaders->xTCPHeader.usChecksum;
-
-			pxIPHeader_IPv4->usHeaderChecksum = 0x00u;
-			pxIPHeader_IPv4->usHeaderChecksum = usGenerateChecksum( 0u, ( uint8_t * ) &( pxIPHeader_IPv4->ucVersionHeaderLength ), xIPHeaderLength );
-
-			pxIPHeader_IPv4->usHeaderChecksum = ~FreeRTOS_htons( pxIPHeader_IPv4->usHeaderChecksum );
-
-			usChecksum_IP_2 = pxIPHeader_IPv4->usHeaderChecksum;
-
-			/*		pxIPHeader_IPv4->usHeaderChecksum = 0; */
-			/*		pxProtocolHeaders->xTCPHeader.usChecksum = 0; */
-
-			usGenerateProtocolChecksum( pucEthernetBuffer, count, pdTRUE );
-
-			usChecksum_TCP_2 = pxProtocolHeaders->xTCPHeader.usChecksum;
-
-			/*
-			 *  Checksum 0  14 + 20 + 32 = 66 ( 0000 -> 2dbd ) 8386 -> 4443
-			 *  Checksum 1  14 + 20 + 24 = 60 ( 2dbd -> b768 ) 4443 -> 6823
-			 *  Checksum 2  14 + 20 + 32 = 66 ( 0000 -> 2dbc ) 8386 -> 4443
-			 *  Checksum 3  14 + 20 + 24 = 60 ( 2dbc -> b767 ) 4443 -> 6823
-			 */
-			BaseType_t xGood = ( usChecksum_IP == usChecksum_IP_2 ) && ( usChecksum_TCP == usChecksum_TCP_2 );
-			FreeRTOS_printf( ( "%d: Checksum %d  %d + %d + %4d = %4d  ( %04x -> %04x ) %04x -> %04x : %s\n",
-							   offset,
-							   i,
-
-							   ( int ) ipSIZE_OF_ETH_HEADER,
-							   ( int ) xIPHeaderLength,
-							   ( int ) ( FreeRTOS_ntohs( pxIPHeader_IPv4->usLength ) - xIPHeaderLength ),
-							   ( int ) count,
-
-							   FreeRTOS_ntohs( usChecksum_IP ),
-							   FreeRTOS_ntohs( usChecksum_IP_2 ),
-							   FreeRTOS_ntohs( usChecksum_TCP ),
-							   FreeRTOS_ntohs( usChecksum_TCP_2 ),
-							   xGood ? "Good" : "bad" ) );
-		}
-	}
-
-	vPortFree( pcBuffer );
-	debug_crc = 0;
-}
-
 #undef ipconfigUSE_TCP
 #undef ipconfigETHERNET_MINIMUM_PACKET_BYTES
 
@@ -4370,7 +4287,6 @@ int trap_rx_event;
 		IPPacket_IPv6_t * pxIPPacket;
 		static uint16_t usIdentifier = 1;
 		static uint16_t usSequenceNumber = 100;
-		uint16_t usLength;
 		ICMPEcho_IPv6_t * pxICMPHeader;
 		uint16_t usPayloadLength;
 		uint32_t uxPayloadLength;
@@ -4441,8 +4357,10 @@ int trap_rx_event;
 		}
 
 		pxICMPHeader = ( ICMPEcho_IPv6_t * ) pucTarget;
-		pxICMPHeader->usIdentifier = FreeRTOS_htons( usIdentifier++ );
-		pxICMPHeader->usSequenceNumber = FreeRTOS_htons( usSequenceNumber++ );
+		pxICMPHeader->usIdentifier = FreeRTOS_htons( usIdentifier );
+		pxICMPHeader->usSequenceNumber = FreeRTOS_htons( usSequenceNumber );
+		usIdentifier++;
+		usSequenceNumber++;
 		pxICMPHeader->ucTypeOfMessage = ipICMP_PING_REQUEST_IPv6;
 		pxICMPHeader->ucTypeOfService = 0;
 
@@ -4691,73 +4609,114 @@ void dumpHexData( const unsigned char * apBuf,
 
 BaseType_t xPacketBouncedBack( uint8_t * pck )
 {
+	( void ) pck;
 	return pdFALSE;
 }
 
 /*
- * void handle_user_test( char * pcBuffer )
- * {
- *  Socket_t xSocket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP );
- *  if( xSocketValid( xSocket ) == pdTRUE )
- *  {
- *      struct freertos_sockaddr xAddress;
- *      FreeRTOS_printf( ( "socket() OK, calling bind()\n" ) );
- *      memset( &( xAddress ), 0, sizeof xAddress );
- *      BaseType_t rc = FreeRTOS_bind( xSocket, &( xAddress ), (socklen_t) sizeof xAddress );
- *      if( rc == 0 )
- *      {
- *          TickType_t xSmallTimeout = pdMS_TO_TICKS( 20000 );
- *          struct freertos_sockaddr xPeerAddress;
- *          memset( &( xPeerAddress ), 0, sizeof xPeerAddress );
- *          // Note that for connect(), SNDTIMEO must be set.
- *          // For accept(), RCVTIMEO must be configured.
- *          FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_RCVTIMEO, ( void * ) &xSmallTimeout, sizeof( BaseType_t ) );
- *          FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_SNDTIMEO, ( void * ) &xSmallTimeout, sizeof( BaseType_t ) );
- *
- *          FreeRTOS_printf( ( "bind() OK, calling connect()\n" ) );
- *          xPeerAddress.sin_len = sizeof xPeerAddress;
- *          xPeerAddress.sin_family = FREERTOS_AF_INET;
- *          xPeerAddress.sin_port = FreeRTOS_ntohs( 32002 );
- *          xPeerAddress.sin_addr = FreeRTOS_inet_addr_quick( 192, 168, 2, 5 ); // 192.168.2.14
- *          rc = FreeRTOS_connect( xSocket, &( xPeerAddress ), (socklen_t) sizeof xPeerAddress );
- *          if (rc == 0) {
- *              char pcBuffer[80];
- *
- *              // Now that the connection is established, use a normal timeout like 1000 ms.
- *              xSmallTimeout = pdMS_TO_TICKS( 1000 );
- *              FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_RCVTIMEO, ( void * ) &xSmallTimeout, sizeof( BaseType_t ) );
- *              FreeRTOS_setsockopt( xSocket, 0, FREERTOS_SO_SNDTIMEO, ( void * ) &xSmallTimeout, sizeof( BaseType_t ) );
- *
- *              FreeRTOS_printf( ( "connect() OK, calling send()\n" ) );
- *              memset (pcBuffer, 'a', sizeof pcBuffer);
- *              rc = FreeRTOS_send( xSocket, pcBuffer, sizeof pcBuffer, 0 );
- *              vTaskDelay( pdMS_TO_TICKS( 100 ) );
- *              FreeRTOS_printf( ( "calling shutdown()\n" ) );
- *              FreeRTOS_shutdown( xSocket, 0U );
- *  for( ;; )
- *  {
- *                  rc = FreeRTOS_recv( xSocket, pcBuffer, sizeof pcBuffer, 0 );
- *                  if( rc < 0 && rc != -pdFREERTOS_ERRNO_EAGAIN) {
- *                      break;
- *      }
- *  }
- * }
- *          else
- * {
- *              FreeRTOS_printf( ( "connect() failed with rc %d\n", ( int ) rc ) );
- * }
- *      }
- *      else
- *      {
- *          FreeRTOS_printf( ( "bind() failed with rc %d\n", ( int ) rc ) );
- *      }
- *      FreeRTOS_printf( ( "calling closesocket()\n" ) );
- *      FreeRTOS_closesocket( xSocket );
- *  }
- *  else
- *  {
- *      FreeRTOS_printf( ( "The socket is invalid\n" ) );
- *  }
- * }
+ *  A set of stdio functions.
  */
+int	vfprintf_r (struct _reent *apReent, FILE *apFile, const char *apFmt, va_list args)
+{
+	(void)apReent;
+	(void)apFile;
+	(void)apFmt;
+	(void)args;
+	return 0;
+}
 
+int	fclose_r (struct _reent *apReent, FILE *apFile)
+{
+	(void)apReent;
+	(void)apFile;
+	return 0;
+}
+
+_ssize_t _write_r (struct _reent *apReent, int aHandle, const void *ap, size_t aSize)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)ap;
+	(void)aSize;
+	return 0;
+}
+
+int _close_r (struct _reent *apReent, int aHandle)
+{
+	(void)apReent;
+	(void)aHandle;
+	return 0;
+}
+
+_ssize_t _read_r (struct _reent *apReent, int aHandle, void *apPtr, size_t aSize)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)apPtr;
+	(void)aSize;
+	return 0;
+}
+
+_off_t _lseek_r (struct _reent *apReent, int aHandle, _off_t aOffset, int aWhence)
+{
+	(void)apReent;
+	(void)aHandle;
+	(void)aOffset;
+	(void)aWhence;
+	return 0;
+}
+
+int	fclose (FILE *apFile)
+{
+	(void)apFile;
+	configASSERT( 0 );
+	return 0;
+}
+
+int	_fclose_r (struct _reent *apReent, FILE *apFile)
+{
+	(void)apReent;
+	(void)apFile;
+	configASSERT( 0 );
+	return 0;
+}
+
+void exit(int status)
+{
+	configASSERT( 0 );
+	( void ) status;
+	for( ;; )
+	{
+	}
+}
+
+void __libc_fini_array (void)
+{
+}
+
+#include <sys/stat.h>
+
+int _stat(const char fname, struct stat *pstat)
+{
+	( void ) fname;
+	( void ) pstat;
+	configASSERT( 0 );
+	return 0;
+}
+
+int _fstat_r(struct _reent *ptr, int fd, struct stat *pstat)
+{
+	( void ) ptr;
+	( void ) fd;
+	( void ) pstat;
+	configASSERT( 0 );
+	return 0;
+}
+
+int _isatty_r(struct _reent *ptr, int fd)
+{
+	( void ) ptr;
+	( void ) fd;
+	configASSERT( 0 );
+	return 0;
+}
