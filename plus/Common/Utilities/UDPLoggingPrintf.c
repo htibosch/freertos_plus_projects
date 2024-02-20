@@ -101,6 +101,10 @@
 #include "hr_gettime.h"
 #include "UDPLoggingPrintf.h"
 
+#if( USE_LOG_EVENT == 1 )
+	#include "eventLogging.h"
+#endif
+
 /* Set to 1 to end each line with \r\n, or 0 for just \n. */
 #ifndef configUDP_LOGGING_NEEDS_CR_LF
 	#define configUDP_LOGGING_NEEDS_CR_LF  ( 0 )
@@ -156,6 +160,10 @@ string length.  Defaults to 20 x 200 bytes. */
 #define logASCII_CR 			( 13 )
 #define logASCII_NL				( 10 )
 
+#ifndef ipconfigOLD_MULTI
+	#define ipconfigOLD_MULTI   0
+#endif
+
 #ifndef iptraceUDP_LOGGING_TASK_STARTING
 	/* This macro will be called once when the UDP logging task is starting up. */
 	#define	iptraceUDP_LOGGING_TASK_STARTING()	do { } while( 0 )
@@ -163,8 +171,11 @@ string length.  Defaults to 20 x 200 bytes. */
 /*-----------------------------------------------------------*/
 static SemaphoreHandle_t xLoggingSemaphore;
 
+#if( ipconfigMULTI_INTERFACE != 0 )
+   BaseType_t xGetPhyLinkStatus( struct xNetworkInterface *pxInterface );
+#else
    BaseType_t xGetPhyLinkStatus( void );
-
+#endif
 /*
  * Called automatically to create the stream buffer.
  */
@@ -188,7 +199,24 @@ static size_t prvGetMessageFromStreamBuffer( char *pcBuffer, size_t xBufferLengt
 static size_t prvBufferFormattedString( const char *pcFormatString, va_list xArgs );
 
 /* The following function will be called at the end of lUDPLoggingPrintf(). */
-void __attribute__((weak)) vUDPLoggingPost( void );
+extern void vUDPLoggingPost( void );
+
+#if !defined( WIN32 )
+    #define vUDPLoggingPostDefault vUDPLoggingPost
+    #define ATTRIBUTE_WEAK  __attribute__( ( weak ) )
+#endif
+
+ATTRIBUTE_WEAK void vUDPLoggingPostDefault()
+{
+}
+
+#if defined( WIN32 )
+    /*
+	 * The function vUDPLoggingPostDefault() will handle calls to vUDPLoggingPost()
+	 */
+    #pragma comment(linker, "/alternatename:_vUDPLoggingPost=_vUDPLoggingPostDefault")
+#endif
+
 
 void vUDPLoggingHook( const char *pcMessage, BaseType_t xLength );
 
@@ -333,6 +361,9 @@ static size_t prvBufferFormattedString( const char *pcFormatString, va_list xArg
 		ulMilliSeconds = ( uint32_t ) ( ullCurrentTime / 1000ull );
 		ulMicroSeconds = ( uint32_t ) ( ullCurrentTime % 1000ull );
 
+//		#warning Do no clear this struct
+//		memset (xLogEntry.cMessage, 0, sizeof xLogEntry.cMessage);
+
 		xLength = ( size_t ) snprintf( xLogEntry.cMessage, sizeof( xLogEntry.cMessage ), "%4u.%03u.%03u [%-*s] ",
 			( unsigned int ) ulSeconds, ( unsigned int ) ulMilliSeconds, ( unsigned int ) ulMicroSeconds,
 			configMAX_TASK_NAME_LEN,
@@ -340,7 +371,9 @@ static size_t prvBufferFormattedString( const char *pcFormatString, va_list xArg
 		xLength += ( size_t ) vsnprintf( xLogEntry.cMessage + xLength, sizeof( xLogEntry.cMessage ) - xLength, pcFormatString, xArgs );
 
 		xSpace = uxStreamBufferGetSpace( pxStreamBuffer );
-
+//#if( USE_LOG_EVENT == 1 )
+//	eventLogAdd("%s", xLogEntry.cMessage);
+//#endif
 		if( xSpace > ( xLength + sizeof( BaseType_t ) ) )
 		{
 			uxStreamBufferAdd( pxStreamBuffer, 0, ( const uint8_t * ) &xLength, sizeof( xLength ) );
@@ -450,21 +483,57 @@ void __attribute__((weak)) vUDPLoggingHook( const char *pcMessage, BaseType_t xL
 	#define ENDPOINT_IS_IPv4( pxEndPoint )	( 1 )
 #endif
 
+static NetworkEndPoint_t * pxFindEndpoint()
+{
+	NetworkEndPoint_t *pxEndPoint;
+	for (;;)
+	{
+		for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
+			 pxEndPoint != NULL;
+			 pxEndPoint = FreeRTOS_NextEndPoint( NULL, pxEndPoint ) )
+		{
+			if( ENDPOINT_IS_IPv4( pxEndPoint ) == pdFALSE)
+			{
+				/* We're looking for an IPv4 endpoint. */
+				continue;
+			}
+			if( xIsIPv4Loopback( pxEndPoint->ipv4_settings.ulIPAddress ) )
+			{
+				/* Skip loopback endpoints. */
+				continue;
+			}
+			if( ( pxEndPoint->bits.bEndPointUp == pdFALSE_UNSIGNED ) ||
+				( pxEndPoint->pxNetworkInterface->bits.bInterfaceUp == pdFALSE_UNSIGNED ) )
+			{
+				/* Endpoint or interface is not yet up. */
+				continue;
+			}
+			break;
+		}
+		if( pxEndPoint != pdFALSE )
+		{
+			break;
+		}
+		vTaskDelay( 1000 );
+	}
+	return pxEndPoint;
+}
+
 static void prvLoggingTask( void *pvParameters )
 {
-TickType_t xBlockingTime = pdMS_TO_TICKS( logUDP_LOGGING_BLOCK_TIME_MS );
-struct freertos_sockaddr xLocalAddress;
-#if( ipconfigMULTI_INTERFACE == 0 )
-	struct freertos_sockaddr xRemoteAddress = { 0 };
-#endif
-BaseType_t xSendTimeOut;
-int32_t lLines;
-size_t xCount;
-static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
-#if( ipconfigMULTI_INTERFACE != 0 )
-	NetworkEndPoint_t *pxEndPoint;
-	NetworkInterface_t *pxNetworkInterface;
-#endif
+	TickType_t xBlockingTime = pdMS_TO_TICKS( logUDP_LOGGING_BLOCK_TIME_MS );
+	struct freertos_sockaddr xLocalAddress;
+	#if( ipconfigMULTI_INTERFACE == 0 )
+		struct freertos_sockaddr xRemoteAddress;
+	#endif
+	BaseType_t xSendTimeOut;
+	int32_t lLines;
+	size_t xCount;
+	static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
+	#if( ipconfigMULTI_INTERFACE != 0 )
+		NetworkEndPoint_t *pxEndPoint;
+		NetworkInterface_t *pxNetworkInterface;
+	#endif
 
 	/* Prevent compiler warnings about unused parameters. */
 	( void ) pvParameters;
@@ -474,42 +543,28 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 
 	#if( ipconfigMULTI_INTERFACE != 0 )
 	{
-		for( ;; )
-		{
-			for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
-				pxEndPoint != NULL;
-				pxEndPoint = FreeRTOS_NextEndPoint( NULL, pxEndPoint ) )
-			{
-				if( ( pxEndPoint->bits.bEndPointUp ) && ( ENDPOINT_IS_IPv4( pxEndPoint ) != pdFALSE) )
-				{
-					break;
-				}
-			}
-			if( pxEndPoint != pdFALSE )
-			{
-				break;
-			}
-			vTaskDelay( 1000 );
-		}
+		pxEndPoint = pxFindEndpoint();
 	}
 	#endif /* ipconfigMULTI_INTERFACE */
 
 	#if( ipconfigMULTI_INTERFACE == 0 )
 	{
+		memset( &xRemoteAddress, 0, sizeof xRemoteAddress );
 		xRemoteAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_REMOTE );
+		xRemoteAddress.sin_family = FREERTOS_AF_INET4;
 		#if defined( configUDP_LOGGING_ADDR0 )
 		{
 			/* Use a fixed address to where the logging will be sent. */
-			xRemoteAddress.sin_addr = FreeRTOS_inet_addr_quick( configUDP_LOGGING_ADDR0,
-																configUDP_LOGGING_ADDR1,
-																configUDP_LOGGING_ADDR2,
-																configUDP_LOGGING_ADDR3 );
+			xRemoteAddress.sin_address.ulIP_IPv4 = FreeRTOS_inet_addr_quick( configUDP_LOGGING_ADDR0,
+																			 configUDP_LOGGING_ADDR1,
+																			 configUDP_LOGGING_ADDR2,
+																			 configUDP_LOGGING_ADDR3 );
 		}
 		#else
 		{
 			/* The logging will be broadcasted on the local broadcasting
 			address, such as 192.168.0.255 */
-			xRemoteAddress.sin_addr = FreeRTOS_GetIPAddress() | ~( FreeRTOS_GetNetmask() );
+			xRemoteAddress.sin_address.ulIP_IPv4 = FreeRTOS_GetIPAddress() | ~( FreeRTOS_GetNetmask() );
 		}
 		#endif
 	}
@@ -528,23 +583,26 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 		configASSERT( pxEndPoint != NULL );
 		configASSERT( pxEndPoint->pxNetworkInterface != NULL );
 		pxNetworkInterface = pxEndPoint->pxNetworkInterface;
-		//xRemoteAddress.sin_addr = FREERTOS_INADDR_ANY;
+		//xRemoteAddress.sin_address.ulIP_IPv4 = FREERTOS_INADDR_ANY;
 	}
 	#endif
 
+	memset( &xLocalAddress, 0, sizeof xLocalAddress );
+	xLocalAddress.sin_len = sizeof( xLocalAddress );		/* length of this structure. */
+	xLocalAddress.sin_family = FREERTOS_AF_INET4;
 	xLocalAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_LOCAL );
 #if( ipconfigMULTI_INTERFACE != 0 )
 	#if( ipconfigOLD_MULTI != 0 )
 	{
-		xLocalAddress.sin_addr = pxEndPoint->ulIPAddress;
+		xLocalAddress.sin_address.ulIP_IPv4 = pxEndPoint->ulIPAddress;
 	}
 	#else
 	{
-		xLocalAddress.sin_addr = pxEndPoint->ipv4_settings.ulIPAddress;
+		xLocalAddress.sin_address.ulIP_IPv4 = pxEndPoint->ipv4_settings.ulIPAddress;
 	}
 	#endif
 #else
-	xLocalAddress.sin_addr = FreeRTOS_GetIPAddress();
+	xLocalAddress.sin_address.ulIP_IPv4 = FreeRTOS_GetIPAddress();
 #endif
 
 	FreeRTOS_bind( xUDPLoggingSocket, &xLocalAddress, sizeof( xLocalAddress ) );
@@ -560,7 +618,7 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 	#if( ipconfigMULTI_INTERFACE != 0 )
 		if( pxNetworkInterface->pfGetPhyLinkStatus( pxNetworkInterface ) != pdFALSE )
 	#else
-		if( xGetPhyLinkStatus() != pdFALSE )
+		if( xGetPhyLinkStatus( ) != pdFALSE )
 	#endif
 		{
 			/* Check for messages in the buffer. */
@@ -612,36 +670,23 @@ static char cLoggingLine[ configUDP_LOGGING_STRING_LENGTH ];
 				#if( ipconfigMULTI_INTERFACE != 0 )
 				{
 					struct freertos_sockaddr xAddress;
-					NetworkEndPoint_t *pxEndPoint;
-
 					memset( &( xAddress ), 0, sizeof xAddress );
-					for( pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
-						pxEndPoint != NULL;
-						)
+					xAddress.sin_len = sizeof( xAddress );		/* length of this structure. */
+					xAddress.sin_family = FREERTOS_AF_INET;
+					xAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_REMOTE );
+
+					#if( ipconfigOLD_MULTI != 0 )
 					{
-						if( ENDPOINT_IS_IPv4( pxEndPoint ) )
-						{
-							xAddress.sin_len = sizeof( xAddress );		/* length of this structure. */
-							xAddress.sin_family = FREERTOS_AF_INET;
-							#if( ipconfigOLD_MULTI != 0 )
-							{
-								xAddress.sin_addr = pxEndPoint->ulIPAddress | ~( pxEndPoint->ulNetMask );
-							}
-							#else
-							{
-								xAddress.sin_addr = pxEndPoint->ipv4_settings.ulIPAddress | ~( pxEndPoint->ipv4_settings.ulNetMask );
-							}
-							#endif
-							xAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_REMOTE );
-							//if( pxNextEndPoint == NULL )
-							{
-								BaseType_t rc = FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xAddress, sizeof( xAddress ) );
-								//configASSERT( rc == ( BaseType_t ) xCount );
-								vUDPLoggingApplicationHook( cLoggingLine );
-							}
-							break;
-						}
-						pxEndPoint = FreeRTOS_NextEndPoint( NULL, pxEndPoint );
+						xAddress.sin_address.ulIP_IPv4 = pxEndPoint->ulIPAddress | ~( pxEndPoint->ulNetMask );
+					}
+					#else
+					{
+						xAddress.sin_address.ulIP_IPv4 = pxEndPoint->ipv4_settings.ulIPAddress | ~( pxEndPoint->ipv4_settings.ulNetMask );
+					}
+					#endif
+					{
+						BaseType_t rc = FreeRTOS_sendto( xUDPLoggingSocket, ( void * ) cLoggingLine, xCount, 0, &xAddress, sizeof( xAddress ) );
+						vUDPLoggingApplicationHook( cLoggingLine );
 					}
 				}
 				#else

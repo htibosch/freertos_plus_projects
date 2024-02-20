@@ -194,7 +194,7 @@ BaseType_t xRandom32( uint32_t * pulValue );
 /* Send SNMP messages to a particular UC3 device. */
 static void snmp_test( void );
 
-/*void handle_user_test( char * pcBuffer ); */
+static void start_RNG( void );
 
 #if ( ipconfigTCP_KEEP_ALIVE == 0 )
 	#warning Please define ipconfigTCP_KEEP_ALIVE
@@ -421,6 +421,86 @@ static TaskHandle_t xServerWorkTaskHandle = NULL;
 #define TCP_printf()          do {} while( 0 )
 #define TCP_debug_printf()    do {} while( 0 )
 
+static NetworkInterface_t xInterface;
+static NetworkEndPoint_t xEndPoints[ 4 ];
+
+#if( ipconfigMULTI_INTERFACE == 1 )
+
+#include "net_setup.h"
+
+static int setup_endpoints()
+{
+	const char * pcMACAddress = "00-11-11-11-11-42";
+
+	/* Initialise the STM32F network interface structure. */
+	pxSTM32Fxx_FillInterfaceDescriptor( 0, &xInterface );
+
+	SetupV4_t setup_v4 =
+	{
+		.pcMACAddress = pcMACAddress,
+		.pcIPAddress = "192.168.2.107",
+		.pcMask = "255.255.255.0",
+		.pcGateway = "192.168.2.1",
+		.eType = eStatic,  /* or eDHCP if you wish. */
+//		.eType = eDHCP,
+		.pcDNS[0] = "118.98.44.10",
+		.pcDNS[1] = "118.98.44.100"
+	};
+
+	SetupV4_t setup_v4_second =
+	{
+		.pcMACAddress = "00-11-11-11-11-07", // pcMACAddress,
+		.pcIPAddress = "172.16.0.107",
+		.pcMask = "255.255.224.0",
+		.pcGateway = "172.16.0.1",
+		.eType = eStatic,  /* or eDHCP if you wish. */
+//		.eType = eDHCP,
+//		.pcDNS[0] = "118.98.44.10",
+//		.pcDNS[1] = "118.98.44.100"
+	};
+
+	SetupV6_t setup_v6_global =
+	{
+		.pcMACAddress = pcMACAddress,
+		.pcIPAddress = "2600:70ff:c066::2001",  /* create it dynamically, based on the prefix. */
+		.pcPrefix = "2600:70ff:c066::",
+		.uxPrefixLength = 64U,
+		.pcGateway = "fe80::ba27:ebff:fe5a:d751",  /* GW will be set during RA or during DHCP. */
+		.eType = eStatic,
+//		.eType = eRA,  /* Use Router Advertising. */
+//		.eType = eDHCP,  /* Use DHCPv6. */
+		.pcDNS[0] = "fe80::1",
+		.pcDNS[1] = "2001:4860:4860::8888",
+	};
+
+	SetupV6_t setup_v6_local =
+	{
+		.pcMACAddress = pcMACAddress,
+		.pcIPAddress = "fe80::7004",  /* A easy-to-remember link-local IP address. */
+		.pcPrefix = "fe80::",
+		.uxPrefixLength = 10U,
+		.eType = eStatic,  /* A fixed IP-address. */
+	};
+
+//	xSetupEndpoint_v4( &xInterface, &( xEndPoints[ 1 ] ), &setup_v4_second );
+	xSetupEndpoint_v4( &xInterface, &( xEndPoints[ 0 ] ), &setup_v4 );
+	xSetupEndpoint_v6( &xInterface, &( xEndPoints[ 2 ] ), &setup_v6_global );
+	xSetupEndpoint_v6( &xInterface, &( xEndPoints[ 3 ] ), &setup_v6_local );
+
+	FreeRTOS_IPInit_Multi();
+}
+#else
+static int setup_endpoints()
+{
+		const uint8_t ucIPAddress[ 4 ] = { 192, 168, 2, 114 };
+		const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
+		const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 2, 1 };
+		const uint8_t ucDNSServerAddress[ 4 ] = { 118, 98, 44, 10 };
+//		const uint8_t ucDNSServerAddress[ 4 ] = { 203, 130, 196, 6 };
+		FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
+}
+#endif
+
 int main( void )
 {
 	uint32_t ulSeed = 0x5a5a5a5a;
@@ -481,27 +561,7 @@ int main( void )
 	 * ullGetHighResolutionTime() will be used to get the running time in uS. */
 	vStartHighResolutionTimer();
 
-	{
-		/* Enable the clock for the RNG. */
-		__HAL_RCC_RNG_CLK_ENABLE();
-		RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
-		RNG->CR |= RNG_CR_RNGEN;
-
-		/* Set the Instance pointer. */
-		hrng.Instance = RNG;
-		/* Initialise it. */
-		HAL_RNG_Init( &hrng );
-		/* Get a random number. */
-		HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed );
-		/* And pass it to the rand() function. */
-/*		vSRand( ulSeed ); */
-	}
-
-/*	hrng.Instance = RNG; */
-/*	HAL_RNG_Init( &hrng ); */
-	xRandom32( &ulSeed );
-	prvSRand( ulSeed );
-	ulInitialSeed = ulSeed;
+	start_RNG();
 
 	/* Initialise the network interface.
 	 *
@@ -517,123 +577,9 @@ int main( void )
 		#endif
 	#endif
 
-	#if ( ipconfigMULTI_INTERFACE == 0 )
-		/* Call it later in a task. */
-/*	FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress ); */
-	#else
-		pxSTM32Fxx_FillInterfaceDescriptor( 0, &( xInterfaces[ 0 ] ) );
+    memcpy( ipLOCAL_MAC_ADDRESS, ucMACAddress, sizeof ucMACAddress );
 
-		{
-			/*
-			 * End-point-2
-			 *     Network: 192.168.2.x/24
-			 *     IPv4   : 192.168.2.12
-			 *     Gateway: 192.168.2.1 ( NAT router )
-			 */
-			{
-				NetworkEndPoint_t * pxMyEndPoint = &( xEndPoints[ 0 ] );
-				const uint8_t ucIPAddress[ 4 ] = { 192, 168, 2, 110 };
-				const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
-				const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 2, 1 };
-				const uint8_t ucDNSServerAddress[ 4 ] = { 118, 98, 44, 10 };
-
-				FreeRTOS_FillEndPoint( &( xInterfaces[ 0 ] ), pxMyEndPoint, ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
-
-				memcpy( pxMyEndPoint->ipv4_settings.ulDNSServerAddresses, pxMyEndPoint->ipv4_defaults.ulDNSServerAddresses, sizeof pxMyEndPoint->ipv4_settings.ulDNSServerAddresses );
-
-				#if ( ipconfigUSE_DHCP != 0 )
-					{
-						pxMyEndPoint->bits.bWantDHCP = pdFALSE; /* pdTRUE; */
-					}
-				#endif /* ( ipconfigUSE_DHCP != 0 ) */
-			}
-		}
-
-		#if ( ipconfigUSE_IPv6 != 0 )
-			{
-				/*
-				 * End-point-3  // private
-				 *     Network: fe80::/10 (link-local)
-				 *     IPv6   : fe80::d80e:95cc:3154:b76a/128
-				 *     Gateway: -
-				 */
-				{
-					NetworkEndPoint_t * pxMyEndPoint = &( xEndPoints[ 1 ] );
-					IPv6_Address_t xIPAddress;
-					IPv6_Address_t xPrefix;
-
-					FreeRTOS_inet_pton6( "fe80::", xPrefix.ucBytes );
-					FreeRTOS_inet_pton6( "fe80::7004", xIPAddress.ucBytes );
-
-					FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[ 0 ] ),
-												pxMyEndPoint,
-												&( xIPAddress ),
-												&( xPrefix ),
-												64uL, /* Prefix length. */
-												NULL, /* No gateway */
-												NULL, /* pxDNSServerAddress: Not used yet. */
-												ucMACAddress );
-				}
-			}
-		#endif /* if ( ipconfigUSE_IPv6 != 0 ) */
-		{
-			#if ( ipconfigUSE_IPv6 != 0 )
-
-				/*
-				 * End-point-1
-				 *     Network: 2001:470:ec54::/64
-				 *     IPv6   : 2001:470:ec54::4514:89d5:4589:8b79/128
-				 *     Gateway: fe80::9355:69c7:585a:afe7  // obtained from Router Advertisement
-				 */
-				{
-					NetworkEndPoint_t * pxMyEndPoint = &( xEndPoints[ 2 ] );
-					IPv6_Address_t xIPAddress;
-					IPv6_Address_t xPrefix;
-					IPv6_Address_t xGateWay;
-					IPv6_Address_t xDNSServer;
-
-					FreeRTOS_inet_pton6( "2001:470:ec54::", xPrefix.ucBytes );
-					FreeRTOS_inet_pton6( "2001:4860:4860::8888", xDNSServer.ucBytes );
-
-					FreeRTOS_CreateIPv6Address( &xIPAddress, &xPrefix, 64, pdTRUE );
-					FreeRTOS_inet_pton6( "fe80::9355:69c7:585a:afe7", xGateWay.ucBytes );
-
-					FreeRTOS_FillEndPoint_IPv6( &( xInterfaces[ 0 ] ),
-												pxMyEndPoint,
-												&( xIPAddress ),
-												&( xPrefix ),
-												64uL,            /* Prefix length. */
-												&( xGateWay ),
-												&( xDNSServer ), /* pxDNSServerAddress: Not used yet. */
-												ucMACAddress );
-					#if ( ipconfigUSE_RA != 0 )
-						{
-							pxMyEndPoint->bits.bWantRA = pdTRUE;
-						}
-					#endif /* #if( ipconfigUSE_RA != 0 ) */
-					#if ( ipconfigUSE_DHCPv6 != 0 )
-						{
-							pxMyEndPoint->bits.bWantDHCP = pdTRUE;
-						}
-					#endif /* ( ipconfigUSE_DHCP != 0 ) */
-				}
-			#endif /* ( ipconfigUSE_IPv6 != 0 ) */
-		}
-
-/*	FreeRTOS_IPStart(); */
-	#endif /* ipconfigMULTI_INTERFACE */
-
-	#if ( ipconfigMULTI_INTERFACE == 0 )
-		const uint8_t ucIPAddress[ 4 ] = { 192, 168, 2, 114 };
-		const uint8_t ucNetMask[ 4 ] = { 255, 255, 255, 0 };
-	#warning wrong gateway for test
-		const uint8_t ucGatewayAddress[ 4 ] = { 192, 168, 2, 1 };
-		const uint8_t ucDNSServerAddress[ 4 ] = { 118, 98, 44, 10 };
-/*		const uint8_t ucDNSServerAddress[ 4 ] = { 203, 130, 196, 6 }; */
-		FreeRTOS_IPInit( ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress );
-	#else
-		FreeRTOS_IPStart();
-	#endif
+    setup_endpoints();
 
 	/* Create the task that handles the FTP and HTTP servers.  This will
 	 * initialise the file system then wait for a notification from the network
@@ -1096,33 +1042,27 @@ BaseType_t xRandom32( uint32_t * pulValue )
 						vStartHTTPClientTest( configMINIMAL_STACK_SIZE * 4, tskIDLE_PRIORITY + 1 );
 					}
 				#endif /* ( USE_ECHO_TASK != 0 ) */
-				#if ( ipconfigUSE_SetSocketID == 0 )
-					{
-						#warning ipconfigUSE_SetSocketID is not defined
-					}
-				#else
-					{
-						xSocket_t xTest;
-						void * id1;
-						BaseType_t r1;
-						void * id2;
+				{
+					xSocket_t xTest;
+					void * id1;
+					BaseType_t r1;
+					void * id2;
 
-						xTest = xSocket;
-						/* Check the current value of the SocketID. */
-						id1 = pvSocketGetSocketID( xTest );
-						/* Change value of the SocketID. */
-						r1 = xSocketSetSocketID( xTest, ( void * ) 0x12345678 );
-						/* Check the current value of the SocketID. */
-						id2 = pvSocketGetSocketID( xTest );
-						FreeRTOS_printf( ( "SocketSetSocketID %p -> %p r1 = %d", id1, id2, ( int ) r1 ) );
+					xTest = xSocket;
+					/* Check the current value of the SocketID. */
+					id1 = pvSocketGetSocketID( xTest );
+					/* Change value of the SocketID. */
+					r1 = xSocketSetSocketID( xTest, ( void * ) 0x12345678 );
+					/* Check the current value of the SocketID. */
+					id2 = pvSocketGetSocketID( xTest );
+					FreeRTOS_printf( ( "SocketSetSocketID %p -> %p r1 = %d", id1, id2, ( int ) r1 ) );
 
-						xTest = FREERTOS_INVALID_SOCKET;
-						id1 = pvSocketGetSocketID( xTest );
-						r1 = xSocketSetSocketID( xTest, ( void * ) 0x12345678 );
-						id2 = pvSocketGetSocketID( xTest );
-						FreeRTOS_printf( ( "SocketSetSocketID %p -> %p r1 = %d", id1, id2, ( int ) r1 ) );
-					}
-				#endif /* if ( ipconfigUSE_SetSocketID == 0 ) */
+					xTest = FREERTOS_INVALID_SOCKET;
+					id1 = pvSocketGetSocketID( xTest );
+					r1 = xSocketSetSocketID( xTest, ( void * ) 0x12345678 );
+					id2 = pvSocketGetSocketID( xTest );
+					FreeRTOS_printf( ( "SocketSetSocketID %p -> %p r1 = %d", id1, id2, ( int ) r1 ) );
+				}
 			}
 
 			#if ( USE_ZERO_COPY )
@@ -1639,8 +1579,7 @@ static BaseType_t vHandleOtherCommand( Socket_t xSocket,
 			#if ( ipconfigUSE_IPv6 != 0 )
 				{
 					xAddress.sin_family = FREERTOS_AF_INET6;
-					sockaddr6_t * pxAddressV6 = ( sockaddr6_t * ) &( xAddress );
-					FreeRTOS_inet_pton6( "fe80::6816:5e9b:80a0:9edb", pxAddressV6->sin_addrv6.ucBytes );
+					FreeRTOS_inet_pton6( "fe80::6816:5e9b:80a0:9edb", xAddress.sin_address.xIP_IPv6.ucBytes );
 				}
 			#else
 				{
@@ -1700,13 +1639,13 @@ static BaseType_t vHandleOtherCommand( Socket_t xSocket,
 
 				for( index = 0; index < ARRAY_SIZE( ip_address ); index++ )
 				{
-					struct freertos_sockaddr6 xAddress;
+					struct freertos_sockaddr xAddress;
 					memset( &xAddress, '\0', sizeof xAddress );
 					xAddress.sin_len = sizeof( xAddress ); /* length of this structure. */
 					xAddress.sin_family = FREERTOS_AF_INET6;
 					xAddress.sin_port = FreeRTOS_htons( configUDP_LOGGING_PORT_REMOTE );
 					xAddress.sin_flowinfo = 0; /* IPv6 flow information. */
-					FreeRTOS_inet_pton6( ip_address[ index ], xAddress.sin_addrv6.ucBytes );
+					FreeRTOS_inet_pton6( ip_address[ index ], xAddress.sin_address.xIP_IPv6.ucBytes );
 					FreeRTOS_sendto( xSocket, ptr, strlen( ptr ), 0, ( const struct freertos_sockaddr * ) &( xAddress ), sizeof( xAddress ) );
 				}
 			}
@@ -2621,7 +2560,7 @@ static void MX_FSMC_Init( void )
 /* Called by FreeRTOS+TCP when the network connects or disconnects.  Disconnect
  * events are only received if implemented in the MAC driver. */
 #if ( ipconfigMULTI_INTERFACE != 0 ) && ( ipconfigCOMPATIBLE_WITH_SINGLE == 0 )
-	void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent,
+	void vApplicationIPNetworkEventHook_Multi( eIPCallbackEvent_t eNetworkEvent,
 										 NetworkEndPoint_t * pxEndPoint )
 #else
 	void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
@@ -2774,8 +2713,8 @@ static void prvSRand( UBaseType_t ulSeed )
 /*-----------------------------------------------------------*/
 
 #if ( ipconfigMULTI_INTERFACE != 0 )
-	extern BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t * pxEndPoint,
-												const char * pcName );
+	extern BaseType_t xApplicationDNSQueryHook_Multi( NetworkEndPoint_t * pxEndPoint,
+                                                      const char * pcName );
 #else
 	extern BaseType_t xApplicationDNSQueryHook( const char * pcName );
 #endif
@@ -3010,7 +2949,7 @@ const char * pcApplicationHostnameHook( void )
 /*-----------------------------------------------------------*/
 
 #if ( ipconfigMULTI_INTERFACE != 0 )
-	BaseType_t xApplicationDNSQueryHook( NetworkEndPoint_t * pxEndPoint,
+	BaseType_t xApplicationDNSQueryHook_Multi( NetworkEndPoint_t * pxEndPoint,
 										 const char * pcName )
 #else
 	BaseType_t xApplicationDNSQueryHook( const char * pcName )
@@ -3079,7 +3018,8 @@ uint32_t ulGetRunTimeCounterValue( void )
 }
 /*-----------------------------------------------------------*/
 
-extern BaseType_t xTaskClearCounters;
+/* 'xTaskClearCounters' was defined in an earlier version of tasks.c */
+/*extern*/ BaseType_t xTaskClearCounters;
 void vShowTaskTable( BaseType_t aDoClear )
 {
 	TaskStatus_t * pxTaskStatusArray;
@@ -3554,15 +3494,15 @@ const struct SPacket packets[] =
 		( void ) pxFrom;
 		( void ) pxDest;
 		#if ( ipconfigUSE_IPv6 != 0 )
-			const struct freertos_sockaddr6 * pxFrom6 = ( const struct freertos_sockaddr6 * ) pxFrom;
-/*const struct freertos_sockaddr6 *pxDest6 = ( const struct freertos_sockaddr6 * ) pxDest; */
+			const struct freertos_sockaddr * pxFrom6 = ( const struct freertos_sockaddr * ) pxFrom;
+/*const struct freertos_sockaddr *pxDest6 = ( const struct freertos_sockaddr * ) pxDest; */
 		#endif
 		#if ( ipconfigUSE_IPv6 != 0 )
 			if( pxFrom6->sin_family == FREERTOS_AF_INET6 )
 			{
 /*		FreeRTOS_printf( ( "xOnUdpReceive_6: %d bytes\n",  ( int ) xLength ) ); */
-/*		FreeRTOS_printf( ( "xOnUdpReceive_6: from %pip\n", pxFrom6->sin_addrv6.ucBytes ) ); */
-/*		FreeRTOS_printf( ( "xOnUdpReceive_6: to   %pip\n", pxDest6->sin_addrv6.ucBytes ) ); */
+/*		FreeRTOS_printf( ( "xOnUdpReceive_6: from %pip\n", pxFrom6->sin_address.xIP_IPv6.ucBytes ) ); */
+/*		FreeRTOS_printf( ( "xOnUdpReceive_6: to   %pip\n", pxDest6->sin_address.xIP_IPv6.ucBytes ) ); */
 			}
 			else
 		#endif
@@ -3596,8 +3536,9 @@ void vUDPTest( void * pvParameters )
 	/* Check the socket was created. */
 	configASSERT( xUDPSocket != FREERTOS_INVALID_SOCKET );
 
-	xBindAddress.sin_addr = FreeRTOS_GetIPAddress();
+	xBindAddress.sin_address.ulIP_IPv4 = FreeRTOS_GetIPAddress();
 	xBindAddress.sin_port = FreeRTOS_htons( port_number );
+	xBindAddress.sin_family = FREERTOS_AF_INET4;
 	int rc = FreeRTOS_bind( xUDPSocket, &xBindAddress, sizeof xAddressLength );
 	FreeRTOS_printf( ( "FreeRTOS_bind %u rc = %d", FreeRTOS_ntohs( xBindAddress.sin_port ), rc ) );
 
@@ -3629,16 +3570,14 @@ void vUDPTest( void * pvParameters )
 									   &( xFromAddress ),
 									   sizeof xFromAddress );
 			#if ( ipconfigUSE_IPv6 != 0 )
-				sockaddr6_t * pxSourceAddressV6 = ( sockaddr6_t * ) &( xFromAddress );
-
-				if( pxSourceAddressV6->sin_family == ( uint8_t ) FREERTOS_AF_INET6 )
+				if( xFromAddress.sin_family == ( uint8_t ) FREERTOS_AF_INET6 )
 				{
-					FreeRTOS_inet_ntop( FREERTOS_AF_INET6, ( void * ) pxSourceAddressV6->sin_addrv6.ucBytes, pcAddressBuffer, sizeof pcAddressBuffer );
+					FreeRTOS_inet_ntop( FREERTOS_AF_INET6, ( void * ) xFromAddress.sin_address.xIP_IPv6.ucBytes, pcAddressBuffer, sizeof pcAddressBuffer );
 				}
 				else
 			#endif
 			{
-				FreeRTOS_inet_ntop( FREERTOS_AF_INET4, ( void * ) &( xFromAddress.sin_addr ), pcAddressBuffer, sizeof pcAddressBuffer );
+				FreeRTOS_inet_ntop( FREERTOS_AF_INET4, ( void * ) &( xFromAddress.sin_address.ulIP_IPv4 ), pcAddressBuffer, sizeof pcAddressBuffer );
 			}
 
 			FreeRTOS_printf( ( "Received %s port %u: %d bytes: %02x %02x %02x %02x Send %d\n",
@@ -4612,6 +4551,97 @@ BaseType_t xPacketBouncedBack( uint8_t * pck )
 	( void ) pck;
 	return pdFALSE;
 }
+
+
+#if ( ipconfigMULTI_INTERFACE != 0 )
+
+    void show_single_addressinfo( const char * pcFormat,
+                                  const struct freertos_addrinfo * pxAddress )
+    {
+        char cBuffer[ 40 ];
+        const uint8_t * pucAddress;
+
+        #if ( ipconfigUSE_IPv6 != 0 )
+            if( pxAddress->ai_family == FREERTOS_AF_INET6 )
+            {
+                pucAddress = pxAddress->ai_addr->sin_address.xIP_IPv6.ucBytes;
+            }
+            else
+        #endif /* ( ipconfigUSE_IPv6 != 0 ) */
+        {
+            pucAddress = ( const uint8_t * ) &( pxAddress->ai_addr->sin_address.ulIP_IPv4 );
+        }
+
+        ( void ) FreeRTOS_inet_ntop( pxAddress->ai_family, ( const void * ) pucAddress, cBuffer, sizeof( cBuffer ) );
+
+        if( pcFormat != NULL )
+        {
+            FreeRTOS_printf( ( pcFormat, cBuffer ) );
+        }
+        else
+        {
+            FreeRTOS_printf( ( "Address: %s\n", cBuffer ) );
+        }
+    }
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief For testing purposes: print a list of DNS replies.
+ * @param[in] pxAddress: The first reply received ( or NULL )
+ */
+    void show_addressinfo( const struct freertos_addrinfo * pxAddress )
+    {
+        const struct freertos_addrinfo * ptr = pxAddress;
+        BaseType_t xIndex = 0;
+
+        while( ptr != NULL )
+        {
+            show_single_addressinfo( "Found Address: %s", ptr );
+
+            ptr = ptr->ai_next;
+        }
+
+        /* In case the function 'FreeRTOS_printf()` is not implemented. */
+        ( void ) xIndex;
+    }
+
+    #if ( ipconfigCOMPATIBLE_WITH_SINGLE == 1 ) && ( ipAFTER_INTEGRATION == 1 )
+        void FreeRTOS_GetAddressConfiguration( uint32_t * pulIPAddress,
+                                               uint32_t * pulNetMask,
+                                               uint32_t * pulGatewayAddress,
+                                               uint32_t * pulDNSServerAddress )
+        {
+            struct xNetworkEndPoint * pxEndPoint = FreeRTOS_FirstEndPoint( NULL );
+
+            FreeRTOS_GetEndPointConfiguration( pulIPAddress, pulNetMask, pulGatewayAddress, pulDNSServerAddress, pxEndPoint );
+        }
+    #endif /* ( ipconfigCOMPATIBLE_WITH_SINGLE ) */
+
+#endif /* if ( ipconfigMULTI_INTERFACE != 0 ) */
+
+void start_RNG( void )
+{
+    uint32_t ulSeed = 0x5a5a5a5a;
+	/* Enable the clock for the RNG. */
+	__HAL_RCC_RNG_CLK_ENABLE();
+	RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
+	RNG->CR |= RNG_CR_RNGEN;
+
+	/* Set the Instance pointer. */
+	hrng.Instance = RNG;
+	/* Initialise it. */
+	HAL_RNG_Init( &hrng );
+	/* Get a random number. */
+	HAL_RNG_GenerateRandomNumber( &hrng, &ulSeed );
+	/* And pass it to the rand() function. */
+/*		vSRand( ulSeed ); */
+/*		hrng.Instance = RNG; */
+/*		HAL_RNG_Init( &hrng ); */
+	xRandom32( &ulSeed );
+	prvSRand( ulSeed );
+	ulInitialSeed = ulSeed;
+}
+
 
 /*
  *  A set of stdio functions.

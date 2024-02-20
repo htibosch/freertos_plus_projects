@@ -116,7 +116,7 @@ void plus_echo_application_thread( void * parameters )
 	/* bind to port 80 at any interface */
 	memset( &( xAddress ), '\0', sizeof xAddress );
 	xAddress.sin_port = FreeRTOS_htons( ECHO_SERVER_PORT );
-	xAddress.sin_addr = echoServerIPAddress();
+	xAddress.sin_address.ulIP_IPv4 = echoServerIPAddress();
 	xAddress.sin_len = sizeof( xAddress );
 	xAddress.sin_family = FREERTOS_AF_INET;
 
@@ -160,7 +160,7 @@ void plus_echo_application_thread( void * parameters )
 			FreeRTOS_GetRemoteAddress( new_sd, &xRemoteAddress );
 
 			lUDPLoggingPrintf( "Echo client from %xip:%u\n",
-							   ( unsigned ) FreeRTOS_ntohl( xRemoteAddress.sin_addr ),
+							   ( unsigned ) FreeRTOS_ntohl( xRemoteAddress.sin_address.ulIP_IPv4 ),
 							   FreeRTOS_ntohs( xRemoteAddress.sin_port ) );
 
 

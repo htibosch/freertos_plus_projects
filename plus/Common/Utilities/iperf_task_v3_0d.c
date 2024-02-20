@@ -176,11 +176,9 @@ typedef struct
 		uint32_t xRemainingTime;
 		TimeOut_t xTimeOut;
 	#endif /* ipconfigIPERF_VERSION == 3 */
-	#if( ipconfigUSE_IPv6 != 0 )
-		struct freertos_sockaddr6 xRemoteAddr;
-	#else
-		struct freertos_sockaddr xRemoteAddr;
-	#endif
+
+	struct freertos_sockaddr xRemoteAddr;
+
 	uint32_t ulRecvCount;
 	struct xLIST_ITEM xListItem;	/* With this item the client will be bound to a List_t. */
 } TcpClient_t;
@@ -252,7 +250,7 @@ Socket_t xNexSocket;
 
 		listSET_LIST_ITEM_OWNER( &( pxClient->xListItem ), ( void* ) pxClient );
 	#if( ipconfigUSE_IPv6 != 0 )
-		FreeRTOS_GetRemoteAddress( xNexSocket, ( struct freertos_sockaddr6 * ) &pxClient->xRemoteAddr );
+		FreeRTOS_GetRemoteAddress( xNexSocket, ( struct freertos_sockaddr * ) &pxClient->xRemoteAddr );
 	#else
 		FreeRTOS_GetRemoteAddress( xNexSocket, ( struct freertos_sockaddr * ) &pxClient->xRemoteAddr );
 		FreeRTOS_inet_ntoa( pxClient->xRemoteAddr.sin_addr, pucBuffer );

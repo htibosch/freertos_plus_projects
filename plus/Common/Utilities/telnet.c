@@ -133,7 +133,7 @@ BaseType_t xTelnetSend( Telnet_t * pxTelnet,
 
 		/* Send to all, or send to a specific IP/port address. */
 		if( ( pxAddress == NULL ) ||
-			( ( pxAddress->sin_addr == pxClient->xAddress.sin_addr ) && ( pxAddress->sin_port == pxClient->xAddress.sin_port ) ) )
+			( ( pxAddress->sin_address.ulIP_IPv4 == pxClient->xAddress.sin_address.ulIP_IPv4 ) && ( pxAddress->sin_port == pxClient->xAddress.sin_port ) ) )
 		{
 			xResult = FreeRTOS_send( pxClient->xSocket, pcBuffer, xLength, 0 );
 
@@ -161,13 +161,9 @@ BaseType_t xTelnetRecv( Telnet_t * pxTelnet,
 {
 	Socket_t xSocket;
 
-	#if ( ipconfigUSE_IPv6 != 0 )
-		struct freertos_sockaddr6 xAddress;
-		struct freertos_sockaddr * xAddress4 = ( struct freertos_sockaddr * ) &( xAddress );
-	#else
-		struct freertos_sockaddr xAddress;
-		struct freertos_sockaddr * xAddress4 = ( struct freertos_sockaddr * ) &( xAddress );
-	#endif
+	struct freertos_sockaddr xAddress;
+	struct freertos_sockaddr * xAddress4 = ( struct freertos_sockaddr * ) &( xAddress );
+
 	socklen_t xSize = sizeof( xAddress );
 	BaseType_t xResult = 0;
 	TickType_t uxShortTmout = pdMS_TO_TICKS( 10U );
@@ -194,16 +190,15 @@ BaseType_t xTelnetRecv( Telnet_t * pxTelnet,
 			#if ( ipconfigUSE_IPv6 != 0 )
 				if( xAddress.sin_family == FREERTOS_AF_INET6 )
 				{
-					struct freertos_sockaddr6 * pxAddress6 = ( struct freertos_sockaddr6 * ) &( xAddress );
 					FreeRTOS_printf( ( "xTelnetRead: new client from %pip:%u\n",
-									   pxAddress6->sin_addrv6.ucBytes,
-									   ( unsigned ) FreeRTOS_ntohs( pxAddress6->sin_port ) ) );
+									   xAddress.sin_address.xIP_IPv6.ucBytes,
+									   ( unsigned ) FreeRTOS_ntohs( xAddress.sin_port ) ) );
 				}
 				else
 			#endif
 			{
 				FreeRTOS_printf( ( "xTelnetRead: new client from %xip:%u\n",
-								   ( unsigned ) FreeRTOS_ntohl( xAddress4->sin_addr ),
+								   ( unsigned ) FreeRTOS_ntohl( xAddress4->sin_address.ulIP_IPv4 ),
 								   ( unsigned ) FreeRTOS_ntohs( xAddress4->sin_port ) ) );
 			}
 
@@ -297,7 +292,8 @@ static BaseType_t prvCreateParent( Telnet_t * pxTelnet,
 
 			if( xResult >= 0 )
 			{
-				xBindAddress.sin_addr = 0;
+				xBindAddress.sin_family = FREERTOS_AF_INET4;
+				xBindAddress.sin_address.ulIP_IPv4 = 0;
 				xBindAddress.sin_port = FreeRTOS_htons( xPortNr );
 				xResult = FreeRTOS_bind( pxTelnet->xParentSocket, &xBindAddress, sizeof( xBindAddress ) );
 

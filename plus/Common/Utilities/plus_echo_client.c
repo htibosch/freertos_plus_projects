@@ -63,11 +63,12 @@ void plus_echo_client_thread( void * parameters )
 	{
 		TickType_t t2 = xTaskGetTickCount();
 		xEchoServerAddress.sin_port = FreeRTOS_htons( ECHO_SERVER_PORT );
-		xEchoServerAddress.sin_addr = echoServerIPAddress();
+		xEchoServerAddress.sin_family = FREERTOS_AF_INET4;
+		xEchoServerAddress.sin_address.ulIP_IPv4 = echoServerIPAddress();
 
 		if( ( t2 - t1 ) > 1000U )
 		{
-			if( ( plus_test_active != 0 ) && ( xEchoServerAddress.sin_addr != 0U ) )
+			if( ( plus_test_active != 0 ) && ( xEchoServerAddress.sin_address.ulIP_IPv4 != 0U ) )
 			{
 				handle_connection();
 			}

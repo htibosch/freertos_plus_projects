@@ -72,7 +72,6 @@
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 #include "FreeRTOS_TCP_IP.h"
-#include "FreeRTOS_Routing.h"
 
 #include "iperf_task.h"
 

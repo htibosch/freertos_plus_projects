@@ -92,7 +92,7 @@ DEFS += -DSTM32F4xx=1
 LD_EXTRA_FLAGS =
 
 FREERTOS_ROOT = \
-	$(ROOT_PATH)/framework/FreeRTOS_v10.0.0
+	$(ROOT_PATH)/framework/FreeRTOS_V10.6.2
 
 FREERTOS_PORT_PATH = \
 	$(FREERTOS_ROOT)/portable/GCC/ARM_CM4F
@@ -108,12 +108,12 @@ AMAZON_PATH = $(subst /fireworks,,$(abspath ../../../fireworks))
 ifeq ($(ipconfigMULTI_INTERFACE),true)
 	DEFS += -DipconfigMULTI_INTERFACE=1
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-multi.v2.3.1
+		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-main
 else
 	DEFS += -DipconfigMULTI_INTERFACE=0
 	ipconfigUSE_IPv6=false
 	PLUS_TCP_PATH = \
-		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP.v2.3.4
+		$(ROOT_PATH)/Framework/FreeRTOS-Plus-TCP-main
 endif
 
 # Check for \Home\amazon-freertos\ipv6\FreeRTOS-Plus-TCP\source\FreeRTOS_IP_Timers.c
@@ -307,7 +307,7 @@ DEFS += -DSTM32F407xx=1
 ifeq ($(USE_IPERF),true)
 	DEFS += -D USE_IPERF=1
 	C_SRCS += \
-		$(ROOT_PATH)/Common/Utilities/iperf_task_v3_0d.c
+		$(ROOT_PATH)/Common/Utilities/iperf_task_v3_0g.c
 else
 	DEFS += -D USE_IPERF=0
 endif
@@ -395,7 +395,8 @@ endif
 
 C_SRCS += \
 	$(TCP_UTILITIES)/tcp_netstat.c \
-	$(TCP_UTILITIES)/ddos_testing.c
+	$(TCP_UTILITIES)/ddos_testing.c \
+	$(TCP_UTILITIES)/net_setup.c
 
 DEFS += -DUSE_UDP_CALLNACK=1
 
@@ -489,8 +490,8 @@ ifeq ($(SMALL_SIZE),true)
 	DEFS += -D ipconfigHAS_DEBUG_PRINTF=0
 	OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
 else
-#	OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
-	OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
+	OPTIMIZATION = -Os -fno-builtin-memcpy -fno-builtin-memset
+#	OPTIMIZATION = -O0 -fno-builtin-memcpy -fno-builtin-memset
 endif
 
 TARGET = $(CUR_PATH)/stm32F40.elf

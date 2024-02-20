@@ -32,7 +32,7 @@ void handle_user_test( uint32_t ulIPAddress, BaseType_t xPortNumber )
 			xPeerAddress.sin_len = sizeof xPeerAddress;
 			xPeerAddress.sin_family = FREERTOS_AF_INET;
 			xPeerAddress.sin_port = xPortNumber;
-			xPeerAddress.sin_addr = ulIPAddress;
+			xPeerAddress.sin_address.ulIP_IPv4 = ulIPAddress;
 			rc = FreeRTOS_connect( xSocket, &( xPeerAddress ), (socklen_t) sizeof xPeerAddress );
 			if (rc == 0) {
 				char pcBuffer[80];
