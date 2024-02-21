@@ -748,7 +748,7 @@ static void vIPerfTask( void *pvParameter )
 {
 TickType_t xNoTimeOut = 0;
 BaseType_t xBindResult, xListenResult;
-struct freertos_sockaddr xEchoServerAddress;
+static struct freertos_sockaddr xEchoServerAddress;
 #if( ipconfigIPERF_HAS_TCP != 0 )
 	Socket_t xTCPServerSocket;
 #endif /* ipconfigIPERF_HAS_TCP */

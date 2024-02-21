@@ -80,7 +80,7 @@ static uint32_t ulTargetTCPIPAddress = FreeRTOS_inet_addr_quick( 192, 168, 2, 2 
 static uint32_t ulTargetUDPIPAddress = FreeRTOS_inet_addr_quick( 192, 168, 2, 2 );
 
 static void vTCPWork( void );
-struct freertos_sockaddr xEchoServerAddress;
+static struct freertos_sockaddr xEchoServerAddress;
 
 
 /* No need to call the following functions: */

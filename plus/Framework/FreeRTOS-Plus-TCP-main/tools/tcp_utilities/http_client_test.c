@@ -552,6 +552,37 @@
     }
 /*-----------------------------------------------------------*/
 
+    BaseType_t xAreSingleTaskTCPEchoClientsStillRunning( void )
+    {
+        static uint32_t ulLastEchoSocketCount[ echoNUM_HTTP_CLIENTS ] = { 0 }, ulLastConnections[ echoNUM_HTTP_CLIENTS ] = { 0 };
+        BaseType_t xReturn = pdPASS, x;
+
+        /* Return fail is the number of cycles does not increment between
+         * consecutive calls. */
+        for( x = 0; x < echoNUM_HTTP_CLIENTS; x++ )
+        {
+            if( ulTxRxCycles[ x ] == ulLastEchoSocketCount[ x ] )
+            {
+                xReturn = pdFAIL;
+            }
+            else
+            {
+                ulLastEchoSocketCount[ x ] = ulTxRxCycles[ x ];
+            }
+
+            if( ulConnections[ x ] == ulLastConnections[ x ] )
+            {
+                xReturn = pdFAIL;
+            }
+            else
+            {
+                ulConnections[ x ] = ulLastConnections[ x ];
+            }
+        }
+
+        return xReturn;
+    }
+
     void printBuffer( const char * apBuffer,
                       int aLen,
                       int aLineLen,

@@ -52,7 +52,7 @@ USE_LOG_EVENT=true
 
 # Use the HHTP server from the protocols directory
 # This will need FreeRTOS+FAT
-ipconfigUSE_HTTP=false
+ipconfigUSE_HTTP=true
 
 # Use the FTP server from the protocols directory
 # This will need FreeRTOS+FAT

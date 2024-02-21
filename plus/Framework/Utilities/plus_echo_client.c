@@ -28,7 +28,7 @@
 #define STACK_ECHO_SERVER_TASK  ( 512 + 256 )
 #define	PRIO_ECHO_SERVER_TASK     2
 
-struct freertos_sockaddr xEchoServerAddress;
+static struct freertos_sockaddr xEchoServerAddress;
 
 static void handle_connection( void );
 

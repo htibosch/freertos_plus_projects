@@ -165,11 +165,7 @@ static char pcBuffer[ 512 ];
 static void prvEchoClientTask( void *pvParameters )
 {
 Socket_t xSocket;
-#if( ipconfigUSE_IPv6 != 0 )
-	struct freertos_sockaddr6 xEchoServerAddress;
-#else
-	struct freertos_sockaddr xEchoServerAddress;
-#endif
+static struct freertos_sockaddr xEchoServerAddress;
 
 BaseType_t xReceivedBytes, xReturned, xInstance;
 BaseType_t lTransmitted;
