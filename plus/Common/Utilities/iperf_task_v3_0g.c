@@ -485,7 +485,8 @@ static int vIPerfTCPSend( TcpClient_t * pxClient )
                    if( rc != 0 )
                    {
                        FreeRTOS_printf( ( "Got Control Socket: rc %d: exp: '%s' got: '%s'\n", rc, pcExpectedClient, pcReadBuffer ) );
-                       strncpy( pcExpectedClient, pcReadBuffer, sizeof( pcExpectedClient ) );
+                       strncpy( pcExpectedClient, pcReadBuffer, sizeof( pcExpectedClient ) - 1 );
+                       pcExpectedClient[ sizeof( pcExpectedClient ) - 1 ] = '\0';
                        pxControlClient = pxClient;
                        pxClient->bits.bIsControl = pdTRUE_UNSIGNED;
                        pxClient->eTCP_Status = ( eTCP_Server_Status_t ) ( ( ( int ) pxClient->eTCP_Status ) + 1 );
