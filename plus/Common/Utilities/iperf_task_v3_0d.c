@@ -670,7 +670,8 @@ BaseType_t xRecvResult;
 
 		#if( ipconfigIPERF_USE_ZERO_COPY != 0 )
 		{
-			xRecvResult = FreeRTOS_recvfrom( xSocket, ( void * ) &pcRecvBuffer, sizeof( pcRecvBuffer ),
+			const BaseType_t xRecvSize = 0x10000;
+			xRecvResult = FreeRTOS_recvfrom( xSocket, ( void * ) &pcRecvBuffer, xRecvSize,
 				FREERTOS_ZERO_COPY, &xAddress, &xAddressLength );
 		}
 		#else
