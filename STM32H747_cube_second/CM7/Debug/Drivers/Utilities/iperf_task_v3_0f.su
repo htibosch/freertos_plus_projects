@@ -1,0 +1,5 @@
+iperf_task_v3_0f.c:718:20:xOnUdpReceive	0	static
+iperf_task_v3_0f.c:280:13:vIPerfTCPClose	32	static
+iperf_task_v3_0f.c:226:6:vIPerfInstall	16	static
+iperf_task_v3_0f.c:922:5:sscanf64	28	static
+iperf_task_v3_0f.c:817:6:vIPerfTask	296	static

@@ -1,0 +1,6 @@
+UDPLoggingPrintf.c:365:6:vUDPLoggingTaskCreate	16	static
+UDPLoggingPrintf.c:372:11:xLoggingGetSocket	0	static
+UDPLoggingPrintf.c:389:28:vUDPLoggingHook	0	static
+UDPLoggingPrintf.c:343:5:lUDPLoggingPrintf	64	static
+UDPLoggingPrintf.c:400:13:prvLoggingTask	72	static
+UDPLoggingPrintf.c:608:6:vUDPLoggingFlush	16	static

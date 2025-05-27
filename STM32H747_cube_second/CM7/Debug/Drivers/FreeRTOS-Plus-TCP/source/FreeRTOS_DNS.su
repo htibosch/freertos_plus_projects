@@ -1,0 +1,7 @@
+FreeRTOS_DNS.c:1998:21:prvProcessDNSCache	56	static
+FreeRTOS_DNS.c:1189:17:prvSkipNameField	0	static
+FreeRTOS_DNS.c:1335:19:prvParseDNSReply	112	static
+FreeRTOS_DNS.c:229:8:FreeRTOS_dnsclear	0	static
+FreeRTOS_DNS.c:399:12:FreeRTOS_dnslookup	16	static
+FreeRTOS_DNS.c:627:12:FreeRTOS_gethostbyname	96	static
+FreeRTOS_DNS.c:1268:11:ulDNSHandlePacket	8	static

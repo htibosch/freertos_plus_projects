@@ -1,0 +1,2 @@
+system_stm32h7xx_dualcore_boot_cm4_cm7.c:141:6:SystemInit	4	static
+system_stm32h7xx_dualcore_boot_cm4_cm7.c:297:6:SystemCoreClockUpdate	48	static

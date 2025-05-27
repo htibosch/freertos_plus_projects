@@ -1,0 +1,2 @@
+string.h:31:9:memcpy	28	static
+string.h:33:9:memset	20	static

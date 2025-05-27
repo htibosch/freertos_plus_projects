@@ -1,0 +1,8 @@
+stm32h7xx_it.c:74:6:NMI_Handler	0	static
+stm32h7xx_it.c:102:6:MemManage_Handler	0	static
+stm32h7xx_it.c:117:6:BusFault_Handler	0	static
+stm32h7xx_it.c:132:6:UsageFault_Handler	0	static
+stm32h7xx_it.c:147:6:__SVC_Handler	0	static
+stm32h7xx_it.c:160:6:DebugMon_Handler	0	static
+stm32h7xx_it.c:173:6:__PendSV_Handler	0	static
+stm32h7xx_it.c:187:6:SysTick_Handler	8	static

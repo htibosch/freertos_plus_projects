@@ -1,0 +1,17 @@
+main.c:642:13:prvServerWorkTask	296	static
+main.c:208:6:HAL_ETH_MspInit	72	static
+main.c:437:6:Error_Handler	16	static,ignoring_inline_asm
+main.c:268:6:SystemClock_Config	320	static
+main.c:80:5:main	96	static,ignoring_inline_asm
+main.c:454:6:assert_failed	0	static
+main.c:465:10:ulGetRunTimeCounterValue	0	static
+main.c:470:6:vAssertCalled	16	static,ignoring_inline_asm
+main.c:489:6:vApplicationMallocFailedHook	0	static
+main.c:508:10:ulApplicationGetNextSequenceNumber	16	static
+main.c:524:6:vApplicationIPNetworkEventHook	40	static
+main.c:558:12:xApplicationDNSQueryHook	8	static
+main.c:573:13:pcApplicationHostnameHook	0	static
+main.c:582:12:xApplicationGetRandomNumber	8	static
+main.c:614:6:prvGetRegistersFromStack	0	static
+main.c:626:6:HardFault_Handler	0	static,ignoring_inline_asm
+main.c:852:7:vApplicationPingReplyHook	0	static

@@ -1,0 +1,2 @@
+FreeRTOS_Stream_Buffer.c:57:8:uxStreamBufferAdd	24	static
+FreeRTOS_Stream_Buffer.c:152:8:uxStreamBufferGet	32	static

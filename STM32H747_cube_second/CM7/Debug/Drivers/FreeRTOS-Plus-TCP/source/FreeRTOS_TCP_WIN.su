@@ -1,0 +1,17 @@
+FreeRTOS_TCP_WIN.c:1469:21:prvTCPWindowTxHasSpace	4	static
+FreeRTOS_TCP_WIN.c:724:15:vTCPWindowFree	16	static
+FreeRTOS_TCP_WIN.c:1815:19:prvTCPWindowTxCheckAck	80	static
+FreeRTOS_TCP_WIN.c:541:25:xTCPWindowNew	32	static
+FreeRTOS_TCP_WIN.c:422:17:vListInsertGeneric	4	static
+FreeRTOS_TCP_WIN.c:618:14:xTCPWindowRxEmpty	8	static
+FreeRTOS_TCP_WIN.c:760:8:vTCPWindowDestroy	8	static
+FreeRTOS_TCP_WIN.c:806:7:vTCPWindowCreate	48	static
+FreeRTOS_TCP_WIN.c:852:7:vTCPWindowInit	4	static
+FreeRTOS_TCP_WIN.c:914:8:vTCPSegmentCleanup	8	static
+FreeRTOS_TCP_WIN.c:1026:11:lTCPWindowRxCheck	56	static
+FreeRTOS_TCP_WIN.c:1316:11:lTCPWindowTxAdd	72	static
+FreeRTOS_TCP_WIN.c:1451:14:xTCPWindowTxDone	0	static
+FreeRTOS_TCP_WIN.c:1540:14:xTCPWindowTxHasData	16	static
+FreeRTOS_TCP_WIN.c:1628:12:ulTCPWindowTxGet	32	static
+FreeRTOS_TCP_WIN.c:2053:12:ulTCPWindowTxAck	0	static
+FreeRTOS_TCP_WIN.c:2089:12:ulTCPWindowTxSack	72	static

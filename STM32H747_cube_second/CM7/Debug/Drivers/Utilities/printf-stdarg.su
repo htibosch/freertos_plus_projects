@@ -1,0 +1,12 @@
+printf-stdarg.c:52:34:xApplicationMemoryPermissions	0	static
+printf-stdarg.c:60:28:vOutputChar	0	static
+printf-stdarg.c:124:19:strbuf_printchar	8	static
+printf-stdarg.c:193:19:prints	24	static
+printf-stdarg.c:353:19:printi	40	static
+stdio.h:244:5:sprintf	52	static
+printf-stdarg.c:527:13:tiny_print	80	static
+printf-stdarg.c:720:5:tiny_printf	48	static
+stdio.h:268:5:vsnprintf	48	static
+stdio.h:266:5:snprintf	48	static
+stdio.h:210:5:vsprintf	48	static
+printf-stdarg.c:782:13:mkSize	32	static

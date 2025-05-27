@@ -1,0 +1,14 @@
+NetworkInterface.c:517:19:prvNetworkInterfaceInput	48	static
+NetworkInterface.c:715:16:ETH_PHY_IO_WriteReg	16	static
+NetworkInterface.c:693:16:ETH_PHY_IO_ReadReg	16	static
+NetworkInterface.c:455:13:prvEthernetUpdateConfig	120	static
+NetworkInterface.c:829:13:prvEMACHandlerTask	56	static
+NetworkInterface.c:746:13:prvSetFlagsAndNotify.part.0	24	static,ignoring_inline_asm
+NetworkInterface.c:211:12:xNetworkInterfaceInitialise	32	static
+NetworkInterface.c:329:12:xGetPhyLinkStatus	0	static
+NetworkInterface.c:346:12:xNetworkInterfaceOutput	40	static,ignoring_inline_asm
+NetworkInterface.c:740:6:ETH_IRQHandler	0	static
+NetworkInterface.c:762:6:HAL_ETH_TxCpltCallback	0	static
+NetworkInterface.c:769:6:HAL_ETH_RxCpltCallback	0	static
+NetworkInterface.c:776:6:HAL_ETH_DMAErrorCallback	0	static
+NetworkInterface.c:793:6:vNetworkInterfaceAllocateRAMToBuffers	0	static

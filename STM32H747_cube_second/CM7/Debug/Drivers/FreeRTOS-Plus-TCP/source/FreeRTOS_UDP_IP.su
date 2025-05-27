@@ -1,0 +1,2 @@
+FreeRTOS_UDP_IP.c:89:6:vProcessGeneratedUDPPacket	32	static
+FreeRTOS_UDP_IP.c:287:12:xProcessReceivedUDPPacket	48	static

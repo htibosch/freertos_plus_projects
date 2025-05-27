@@ -1,0 +1,14 @@
+FreeRTOS_TCP_IP.c:3451:14:prvSocketSetMSS	16	static
+FreeRTOS_TCP_IP.c:1603:18:prvWinScaleFactor	8	static
+FreeRTOS_TCP_IP.c:2300:14:prvTCPAddTxData	8	static
+FreeRTOS_TCP_IP.c:806:14:prvTCPReturnPacket	64	static
+FreeRTOS_TCP_IP.c:1089:14:prvTCPCreateWindow	24	static
+FreeRTOS_TCP_IP.c:2229:20:prvTCPNextTimeout	32	static
+FreeRTOS_TCP_IP.c:1726:7:vTCPStateChange	40	static
+FreeRTOS_TCP_IP.c:2346:20:prvTCPHandleFin.isra.0	32	static
+FreeRTOS_TCP_IP.c:2023:17:prvTCPPrepareSend.constprop	56	static
+FreeRTOS_TCP_IP.c:758:17:prvTCPSendRepeated	32	static
+FreeRTOS_TCP_IP.c:568:13:xTCPSocketCheck	72	static
+FreeRTOS_TCP_IP.c:3487:13:xProcessReceivedTCPPacket	112	static
+FreeRTOS_TCP_IP.c:3941:16:FreeRTOS_GetTCPStateName	0	static
+FreeRTOS_TCP_IP.c:3982:13:xTCPCheckNewClient	16	static
